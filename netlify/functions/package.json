@@ -1,7 +1,0 @@
-{
-  "name": "nkap-functions",
-  "private": true,
-  "dependencies": {
-    "@netlify/functions": "^2.0.0"
-  }
-}

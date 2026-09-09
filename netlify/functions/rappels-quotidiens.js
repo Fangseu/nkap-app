@@ -13,8 +13,10 @@
 // Réutilise la fonction /.netlify/functions/send-email déjà en place
 // (même template, aucun code dupliqué) pour l'envoi des emails.
 // ================================================================
-
-const { schedule } = require("@netlify/functions");
+// L'horaire d'exécution ("0 7 * * *", tous les jours à 7h UTC) est
+// déclaré dans netlify.toml ([functions."rappels-quotidiens"]) —
+// aucune dépendance npm nécessaire.
+// ================================================================
 
 const SB_URL = process.env.SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -151,7 +153,7 @@ async function traiterCotisations(assoc) {
   await sbUpsert("notif_daily_state", { association_id: assoc.id, type: "cotisations", last_date: td() });
 }
 
-exports.handler = schedule("0 7 * * *", async () => {
+exports.handler = async function () {
   if (!SB_URL || !SB_KEY) {
     console.error("[rappels] SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY manquantes");
     return { statusCode: 500 };
@@ -170,4 +172,4 @@ exports.handler = schedule("0 7 * * *", async () => {
 
   console.log(`[rappels] terminé pour ${associations.length} association(s)`);
   return { statusCode: 200 };
-});
+};
