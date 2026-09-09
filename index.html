@@ -37,7 +37,7 @@
 <meta name="apple-mobile-web-app-title" content="Nkap.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="application-name" content="Nkap.">
-<link rel="manifest" id="pwa-manifest">
+<link rel="manifest" id="pwa-manifest" href="/manifest.json">
 <!-- Icône PWA générée inline -->
 <link rel="apple-touch-icon" id="pwa-icon-apple">
 <link rel="icon" type="image/png" id="pwa-icon-fav">
@@ -12816,9 +12816,10 @@ function chargerRappelPushAdmin(){
         {name:"Réunions",url:_origin+'#reunions',icons:[{src:_pngIcons[96]||iconB64,sizes:"96x96"}]}
       ]
     };
-    var blob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
-    var murl=URL.createObjectURL(blob);
-    var ml=document.getElementById('pwa-manifest');if(ml)ml.href=murl;
+    // Le manifest est servi comme un vrai fichier statique (/manifest.json) — voir
+    // <link rel="manifest"> dans le <head>. On ne le remplace plus par un blob: ici :
+    // un manifest blob: empêche Chrome de générer un WebAPK Android signé/fiable,
+    // ce que Google Play Protect bloque alors comme "application non sécurisée".
     var fa=document.getElementById('pwa-icon-apple');
     if(fa&&_pngIcons[180])fa.href=_pngIcons[180];
     var ff=document.getElementById('pwa-icon-fav');
