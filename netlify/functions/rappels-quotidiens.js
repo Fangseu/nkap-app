@@ -127,6 +127,55 @@ async function traiterReunions(assoc) {
   }
 }
 
+// Le versement de la tontine se fait lors de la réunion mensuelle : on rappelle
+// donc leur gain aux membres tirés au sort pour le mois d'une réunion à venir,
+// en même temps qu'on rappelle la réunion elle-même.
+async function traiterTontine(assoc) {
+  const dans3j = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+  const reunions = await sbGet(
+    "reunions",
+    `association_id=eq.${assoc.id}&date_reunion=gte.${td()}&date_reunion=lte.${dans3j}&select=id,titre,date_reunion,lieu`
+  );
+  if (!reunions.length) return;
+
+  const conf = assoc.config_recurrence || {};
+  const rappelJours = conf.rappel != null ? conf.rappel : 2;
+  const heure = conf.heure || "17:00";
+  const sym = { EUR: "€", USD: "$", GBP: "£", XAF: "FCFA", XOF: "CFA" }[assoc.devise] || assoc.devise || "€";
+
+  for (const r of reunions) {
+    const diffJours = Math.round((new Date(r.date_reunion) - new Date(td())) / 86400000);
+    if (diffJours > rappelJours) continue;
+
+    const mois = r.date_reunion.slice(0, 7);
+    const tirages = await sbGet(
+      "tontine_tirage",
+      `association_id=eq.${assoc.id}&mois_calendrier=eq.${mois}&rappel_envoye=eq.false&select=id,membre_id,montant_gain`
+    );
+    if (!tirages.length) continue;
+
+    const dateStr = new Date(r.date_reunion).toLocaleDateString("fr-FR");
+    const lieu = r.lieu || "";
+    const membreIds = [...new Set(tirages.map((t) => t.membre_id))];
+    const membres = await sbGet("membres", `id=in.(${membreIds.join(",")})&select=id,prenom,nom,email,tel`);
+
+    for (const t of tirages) {
+      const mb = membres.find((m) => m.id === t.membre_id);
+      if (!mb) continue;
+      await envoyerEmail(mb.email, `🎰 Votre tour de tontine approche — ${assoc.nom}`, "rappel_tontine", {
+        assoc: assoc.nom,
+        membre: `${mb.prenom} ${mb.nom}`,
+        montant: `${t.montant_gain} ${sym}`,
+        date: dateStr,
+        heure,
+        lieu,
+      });
+      await envoyerWhatsApp(mb.tel, "rappel_tontine", [`${t.montant_gain} ${sym}`, dateStr], assoc.nom);
+      await sbPatch("tontine_tirage", `id=eq.${t.id}`, { rappel_envoye: true });
+    }
+  }
+}
+
 async function traiterCotisations(assoc) {
   const cots = await sbGet("cotisations", `association_id=eq.${assoc.id}&statut=eq.impaye&select=membre_id,mois,montant`);
   if (cots.length < 3) return;
@@ -164,6 +213,7 @@ exports.handler = async function () {
   for (const assoc of associations) {
     try {
       await traiterReunions(assoc);
+      await traiterTontine(assoc);
       await traiterCotisations(assoc);
     } catch (e) {
       console.error("[rappels] erreur association", assoc.id, e.message);

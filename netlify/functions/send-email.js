@@ -93,6 +93,14 @@ function contenuTemplate(template, data) {
         lignes: ligneCard("Mois", data.mois) + ligneCard("Gain", data.gain),
         cloture: "Félicitations !",
       };
+    case "rappel_tontine":
+      return {
+        icone: "🎰",
+        titre: "Votre tour de tontine approche !",
+        souslitre: "Votre gain sera versé lors de la prochaine réunion",
+        lignes: ligneCard("Montant", data.montant) + ligneCard("Date réunion", data.date) + ligneCard("Heure", data.heure) + ligneCard("Lieu", data.lieu || "À confirmer"),
+        cloture: "Pensez à être présent(e) pour recevoir votre gain !",
+      };
     case "sanction":
       return {
         icone: "⚠️",
