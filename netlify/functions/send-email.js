@@ -1,14 +1,17 @@
 // ================================================================
-// Nkap. — Envoi d'emails transactionnels via Resend
+// Nkap. — Envoi d'emails transactionnels via Brevo
 // Appelée par envoyerEmail() dans index.html : POST /.netlify/functions/send-email
 // Body attendu : { to, subject, template, data }
 // Variables d'environnement à définir dans Netlify (Site configuration
 // → Environment variables) :
-//   RESEND_API_KEY  (obligatoire) — clé API de votre compte Resend
+//   BREVO_API_KEY   (obligatoire) — clé API de votre compte Brevo
 //   EMAIL_FROM      (optionnel)   — ex: "Nkap. <notifications@votredomaine.com>"
-//                                   doit être un domaine vérifié dans Resend.
-//                                   Sans ça, on retombe sur onboarding@resend.dev
-//                                   (fonctionne pour tester, mais limité en prod).
+//                                   l'adresse doit être ajoutée et validée dans
+//                                   Brevo → Paramètres → Expéditeurs & IP, sinon
+//                                   l'envoi échoue (pas besoin de vérif DNS complète
+//                                   comme Resend — juste valider l'adresse une fois).
+//                                   Sans cette variable, on retombe sur
+//                                   "Nkap. <fangseu@gmail.com>" (déjà validé dans Brevo).
 //   APP_URL         (optionnel)   — ex: "https://votredomaine.com" — si définie,
 //                                   ajoute un bouton "Ouvrir mon espace" dans l'email.
 // ================================================================
@@ -234,9 +237,9 @@ exports.handler = async function (event) {
     return { statusCode: 405, headers, body: JSON.stringify({ success: false, error: "Méthode non autorisée" }) };
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
-    return { statusCode: 500, headers, body: JSON.stringify({ success: false, error: "RESEND_API_KEY manquante côté serveur" }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ success: false, error: "BREVO_API_KEY manquante côté serveur" }) };
   }
 
   let payload;
@@ -251,23 +254,35 @@ exports.handler = async function (event) {
     return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: "Champs 'to' et 'subject' requis" }) };
   }
 
-  const from = process.env.EMAIL_FROM || "Nkap. <onboarding@resend.dev>";
+  // EMAIL_FROM au format "Nom <email>" ou juste "email" — Brevo veut les 2 champs séparés,
+  // et l'adresse doit correspondre à un expéditeur validé dans Brevo (Paramètres → Expéditeurs).
+  const fromRaw = process.env.EMAIL_FROM || "Nkap. <fangseu@gmail.com>";
+  const fromMatch = fromRaw.match(/^(.*)<(.+)>$/);
+  const senderName = fromMatch ? fromMatch[1].trim() || "Nkap." : "Nkap.";
+  const senderEmail = fromMatch ? fromMatch[2].trim() : fromRaw.trim();
+
   const html = buildHtml(template, data);
 
   try {
-    const r = await fetch("https://api.resend.com/emails", {
+    const r = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        "api-key": apiKey,
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
-      body: JSON.stringify({ from, to, subject, html }),
+      body: JSON.stringify({
+        sender: { name: senderName, email: senderEmail },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      }),
     });
     const resData = await r.json();
     if (!r.ok) {
       return { statusCode: r.status, headers, body: JSON.stringify({ success: false, error: resData }) };
     }
-    return { statusCode: 200, headers, body: JSON.stringify({ success: true, id: resData.id }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true, id: resData.messageId }) };
   } catch (e) {
     return { statusCode: 500, headers, body: JSON.stringify({ success: false, error: String(e.message || e) }) };
   }
