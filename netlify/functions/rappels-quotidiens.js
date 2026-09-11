@@ -16,6 +16,14 @@
 // L'horaire d'exécution ("0 7 * * *", tous les jours à 7h UTC) est
 // déclaré dans netlify.toml ([functions."rappels-quotidiens"]) —
 // aucune dépendance npm nécessaire.
+//
+// ⚠️ Ce dépôt est déployé sur 2 sites Netlify différents (même base
+// Supabase). Sans garde-fou, les deux enverraient les rappels en même
+// temps chaque jour → doublons. Seul le site "principal" (celui avec
+// la variable PRIMARY_SITE=true) exécute réellement les envois.
+//   PRIMARY_SITE (obligatoire) — mettre "true" UNIQUEMENT sur le site
+//                                 principal (nkap-app.be), absente/
+//                                 différente sur les autres sites.
 // ================================================================
 
 const SB_URL = process.env.SUPABASE_URL;
@@ -202,7 +210,41 @@ async function traiterCotisations(assoc) {
   await sbUpsert("notif_daily_state", { association_id: assoc.id, type: "cotisations", last_date: td() });
 }
 
+// Alerte au bureau (comptes admin actifs) : paiements déclarés par des membres en attente de validation
+// Fréquence : tous les 2 jours (pas quotidien, pour éviter de sursolliciter le bureau)
+async function traiterDeclarationsEnAttente(assoc) {
+  const decls = await sbGet("declarations_paiement", `association_id=eq.${assoc.id}&statut=eq.en_attente&select=id,montant`);
+  if (!decls.length) return;
+
+  const etat = await sbGet("notif_daily_state", `association_id=eq.${assoc.id}&type=eq.declarations&select=last_date`);
+  if (etat.length) {
+    const joursDepuis = Math.floor((new Date(td()) - new Date(etat[0].last_date)) / 86400000);
+    if (joursDepuis < 2) return;
+  }
+
+  const admins = await sbGet("utilisateurs", `association_id=eq.${assoc.id}&role=eq.admin&auth_user_id=not.is.null&select=email`);
+  if (!admins.length) return;
+
+  const sym = { EUR: "€", USD: "$", GBP: "£", XAF: "FCFA", XOF: "CFA" }[assoc.devise] || assoc.devise || "€";
+  const total = decls.reduce((s, d) => s + (Number(d.montant) || 0), 0);
+
+  for (const a of admins) {
+    await envoyerEmail(a.email, `📥 ${decls.length} paiement(s) en attente de validation — ${assoc.nom}`, "rappel_declarations", {
+      assoc: assoc.nom,
+      nombre: String(decls.length),
+      total: `${total} ${sym}`,
+    });
+  }
+
+  await sbUpsert("notif_daily_state", { association_id: assoc.id, type: "declarations", last_date: td() });
+}
+
 exports.handler = async function () {
+  if (process.env.PRIMARY_SITE !== "true") {
+    console.log("[rappels] Site non-principal — envoi desactive ici pour eviter les doublons avec le site principal.");
+    return { statusCode: 200 };
+  }
+
   if (!SB_URL || !SB_KEY) {
     console.error("[rappels] SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY manquantes");
     return { statusCode: 500 };
@@ -215,6 +257,7 @@ exports.handler = async function () {
       await traiterReunions(assoc);
       await traiterTontine(assoc);
       await traiterCotisations(assoc);
+      await traiterDeclarationsEnAttente(assoc);
     } catch (e) {
       console.error("[rappels] erreur association", assoc.id, e.message);
     }

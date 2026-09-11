@@ -13171,11 +13171,11 @@ function chargerRappelPushAdmin(){
           var heure=conf?conf.heure:'17:00';
           var lieu=r.lieu||'';
           if(diffJours<=rappelJours&&!sent['email_reun']){
-          // notifierEmailReunion supprimé ici (déjà envoyé dans le bloc email indépendant)
+          // notifierEmailReunion supprimé ici (déjà envoyé par la fonction serveur programmée)
             sent['email_reun']=1;
           }
           if(diffJours===1&&!sent['email_reun_j1']){
-            notifierEmailRappelJ1(r.titre,dateStr,heure,lieu);
+            // notifierEmailRappelJ1 supprimé ici (déjà envoyé par la fonction serveur programmée)
             sent['email_reun_j1']=1;
           }
           lsSet(notifKey,sent);
@@ -13207,12 +13207,7 @@ function chargerRappelPushAdmin(){
       var cotsRetard=(rs[1].data||[]);
       if(cotsRetard.length>=3&&!sent['cots']){
         envoyerNotifLocale('📋 Cotisations impayées',''+cotsRetard.length+' cotisation(s) impayée(s) à régulariser.','nkap-cots');
-        // WhatsApp — rappel individuel à chaque membre concerné
-        var sym3=getSym();
-        cotsRetard.forEach(function(cot){
-          notifierWARappelCotisation(cot.membre_id, cot.mois||'', cot.montant||0, sym3);
-          notifierEmailRappelCotisation(cot.membre_id, cot.mois||'', cot.montant||0, sym3);
-        });
+        // Email/WhatsApp aux membres supprimés ici (déjà envoyés par la fonction serveur programmée — évite les doublons)
         sent['cots']=1;
       }
       // Amendes impayées
@@ -13233,15 +13228,8 @@ function chargerRappelPushAdmin(){
         var dateStr=new Date(r.date_reunion).toLocaleDateString('fr-FR');
         var heure=conf?conf.heure:'17:00';
         var lieu=r.lieu||'';
-        if(diffJours<=rappelJours){
-          // WhatsApp
-          notifierWAReunion(r.titre, dateStr, lieu);
-          // Email J-2 ou selon config
-          notifierEmailReunion(r.titre, dateStr, heure, lieu);
-        }
-        // Email J-1 spécifique
+        // Email/WhatsApp aux membres supprimés ici (déjà envoyés par la fonction serveur programmée — évite les doublons)
         if(diffJours===1&&!sent['reun_j1']){
-          notifierEmailRappelJ1(r.titre, dateStr, heure, lieu);
           sent['reun_j1']=1;
         }
         sent['reun']=1;

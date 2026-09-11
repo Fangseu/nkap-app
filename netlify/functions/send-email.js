@@ -104,6 +104,14 @@ function contenuTemplate(template, data) {
         lignes: ligneCard("Montant", data.montant) + ligneCard("Date réunion", data.date) + ligneCard("Heure", data.heure) + ligneCard("Lieu", data.lieu || "À confirmer"),
         cloture: "Pensez à être présent(e) pour recevoir votre gain !",
       };
+    case "rappel_declarations":
+      return {
+        icone: "📥",
+        titre: "Paiements en attente de validation",
+        souslitre: `${esc(data.nombre)} déclaration(s) à vérifier`,
+        lignes: ligneCard("Nombre", data.nombre) + ligneCard("Montant total", data.total),
+        cloture: "Connectez-vous à votre espace admin pour les valider.",
+      };
     case "sanction":
       return {
         icone: "⚠️",
