@@ -2917,12 +2917,34 @@ function genererTirage(tontineId,membres,montantPart,moisDebut,anneeDebut,method
     return p;
   }
   var gainFixe=montantPart*12;
-  var col=membres.reduce(function(s,m){return s+m.nb_parts;},0)*montantPart; // N*montantPart
+  var N=membres.reduce(function(s,m){return s+m.nb_parts;},0);
+  var col=N*montantPart; // N*montantPart collecte chaque mois
+
+  // Parts au-dela de 12 : l'excedent doit etre un multiple de 3 (verifie a la
+  // creation du cycle, voir validerNouveauCycle). Chaque part excedentaire,
+  // une par une, devient un gagnant trimestriel supplementaire, placee en
+  // rotation continue sur les derniers mois de chaque trimestre (3, 6, 9, 12,
+  // puis 3, 6, 9, 12...). Ex: excedent=3 -> mois 3,6,9 (1 chacun) ; excedent=6
+  // -> mois 3,6 ont 2 bonus, mois 9,12 en ont 1 chacun.
+  var excedent=Math.max(0,N-12);
+  var moisFinTrimestre=[3,6,9,12];
+  var bonusParMois={};
+  for(var u=0;u<excedent;u++){
+    var moisT=moisFinTrimestre[u%4];
+    bonusParMois[moisT]=(bonusParMois[moisT]||0)+1;
+  }
+
   var slots=[],pool=buildPool(),fond=0;
   for(var mois=1;mois<=12;mois++){
     var ym=tMoisLabel(mois,moisDebut,anneeDebut);
     var dispo=col+fond;
-    var nbG=gainFixe>0?Math.floor(dispo/gainFixe):0;
+    var nbBonusTrim=bonusParMois[mois]||0;
+    // Nombre de gagnants FIXE par calendrier : 1 gagnant normal + les gagnants
+    // trimestriels prevus ce mois-ci (jamais plus, jamais moins — sinon
+    // certains membres gagneraient deux fois dans l'annee). Le fonds reste un
+    // simple suivi comptable (comme le gain fixe classique) : il peut etre
+    // negatif un temps, il se rembourse via les cotisations des mois suivants.
+    var nbG=1+nbBonusTrim;
     fond=dispo-(nbG*gainFixe);
     var done={};
     for(var s=0;s<nbG;s++){
@@ -2935,7 +2957,8 @@ function genererTirage(tontineId,membres,montantPart,moisDebut,anneeDebut,method
       if(idx===-1){pool=buildPool();idx=0;}
       var p=pool.splice(idx,1)[0];
       done[p.membre_id]=true;
-      slots.push({tontine_id:tontineId,association_id:CA.id,mois_num:mois,mois_calendrier:ym,membre_id:p.membre_id,nb_parts_ce_mois:1,montant_gain:gainFixe,collecte_mois:col,surplus_fond:fond,est_mois_trim:false});
+      var estTrim=s>0&&s<=nbBonusTrim; // le 1er gagnant du mois est "normal", les suivants (jusqu'aux bonus dus) sont trimestriels
+      slots.push({tontine_id:tontineId,association_id:CA.id,mois_num:mois,mois_calendrier:ym,membre_id:p.membre_id,nb_parts_ce_mois:1,montant_gain:gainFixe,collecte_mois:col,surplus_fond:fond,est_mois_trim:estTrim});
     }
   }
   return slots;
@@ -3157,6 +3180,9 @@ function validerNouveauCycle(){
   var methodeCheck=(document.querySelector('input[name="t-methode"]:checked')||{}).value||"fixe";
   if(methodeCheck==='pot'&&N!==dureeCheck){
     showErr("Mode Pot Mensuel : il faut exactement "+dureeCheck+" parts (actuellement "+N+"). Utilisez le bouton de correction.");return;
+  }
+  if(methodeCheck==='fixe'&&N>12&&(N-12)%3!==0){
+    showErr("Gain Fixe : au-delà de 12 parts, l'excédent doit être un multiple de 3 (actuellement "+N+" parts, soit "+(N-12)+" en trop). Ajustez le nombre de parts.");return;
   }
 
   // Désactiver le bouton
