@@ -2919,46 +2919,75 @@ function genererTirage(tontineId,membres,montantPart,moisDebut,anneeDebut,method
   var gainFixe=montantPart*12;
   var N=membres.reduce(function(s,m){return s+m.nb_parts;},0);
   var col=N*montantPart; // N*montantPart collecte chaque mois
-
-  // Parts au-dela de 12 : l'excedent doit etre un multiple de 3 (verifie a la
-  // creation du cycle, voir validerNouveauCycle). Chaque part excedentaire,
-  // une par une, devient un gagnant trimestriel supplementaire, placee en
-  // rotation continue sur les derniers mois de chaque trimestre (3, 6, 9, 12,
-  // puis 3, 6, 9, 12...). Ex: excedent=3 -> mois 3,6,9 (1 chacun) ; excedent=6
-  // -> mois 3,6 ont 2 bonus, mois 9,12 en ont 1 chacun.
-  var excedent=Math.max(0,N-12);
-  var moisFinTrimestre=[3,6,9,12];
-  var bonusParMois={};
-  for(var u=0;u<excedent;u++){
-    var moisT=moisFinTrimestre[u%4];
-    bonusParMois[moisT]=(bonusParMois[moisT]||0)+1;
-  }
-
   var slots=[],pool=buildPool(),fond=0;
-  for(var mois=1;mois<=12;mois++){
-    var ym=tMoisLabel(mois,moisDebut,anneeDebut);
-    var dispo=col+fond;
-    var nbBonusTrim=bonusParMois[mois]||0;
-    // Nombre de gagnants FIXE par calendrier : 1 gagnant normal + les gagnants
-    // trimestriels prevus ce mois-ci (jamais plus, jamais moins — sinon
-    // certains membres gagneraient deux fois dans l'annee). Le fonds reste un
-    // simple suivi comptable (comme le gain fixe classique) : il peut etre
-    // negatif un temps, il se rembourse via les cotisations des mois suivants.
-    var nbG=1+nbBonusTrim;
-    fond=dispo-(nbG*gainFixe);
-    var done={};
-    for(var s=0;s<nbG;s++){
-      // Si pool epuise, on repart d'un nouveau pool melange (nouveau tour)
-      if(!pool.length) pool=buildPool();
-      // Chercher premier membre pas encore gagnant CE mois
-      var idx=-1;
-      for(var k=0;k<pool.length;k++){if(!done[pool[k].membre_id]){idx=k;break;}}
-      // Si tous deja gagnants ce mois, repart d'un nouveau pool
-      if(idx===-1){pool=buildPool();idx=0;}
-      var p=pool.splice(idx,1)[0];
-      done[p.membre_id]=true;
-      var estTrim=s>0&&s<=nbBonusTrim; // le 1er gagnant du mois est "normal", les suivants (jusqu'aux bonus dus) sont trimestriels
-      slots.push({tontine_id:tontineId,association_id:CA.id,mois_num:mois,mois_calendrier:ym,membre_id:p.membre_id,nb_parts_ce_mois:1,montant_gain:gainFixe,collecte_mois:col,surplus_fond:fond,est_mois_trim:estTrim});
+
+  if(methode==='pot'){
+    // Pot Mensuel (nouveau systeme, ex-"Gain Fixe") : gain fixe = part x 12.
+    // Parts au-dela de 12 : l'excedent doit etre un multiple de 3 (verifie a
+    // la creation du cycle, voir validerNouveauCycle). Chaque part excedentaire,
+    // une par une, devient un gagnant trimestriel supplementaire, placee en
+    // rotation continue sur les derniers mois de chaque trimestre (3, 6, 9, 12,
+    // puis 3, 6, 9, 12...). Ex: excedent=3 -> mois 3,6,9 (1 chacun) ; excedent=6
+    // -> mois 3,6 ont 2 bonus, mois 9,12 en ont 1 chacun.
+    var excedent=Math.max(0,N-12);
+    var moisFinTrimestre=[3,6,9,12];
+    var bonusParMois={};
+    for(var u=0;u<excedent;u++){
+      var moisT=moisFinTrimestre[u%4];
+      bonusParMois[moisT]=(bonusParMois[moisT]||0)+1;
+    }
+
+    for(var mois=1;mois<=12;mois++){
+      var ym=tMoisLabel(mois,moisDebut,anneeDebut);
+      var dispo=col+fond;
+      var nbBonusTrim=bonusParMois[mois]||0;
+      // Nombre de gagnants FIXE par calendrier : 1 gagnant normal + les gagnants
+      // trimestriels prevus ce mois-ci (jamais plus, jamais moins — sinon
+      // certains membres gagneraient deux fois dans l'annee). Le fonds reste un
+      // simple suivi comptable (comme le gain fixe classique) : il peut etre
+      // negatif un temps, il se rembourse via les cotisations des mois suivants.
+      var nbG=1+nbBonusTrim;
+      fond=dispo-(nbG*gainFixe);
+      var done={};
+      for(var s=0;s<nbG;s++){
+        // Si pool epuise, on repart d'un nouveau pool melange (nouveau tour)
+        if(!pool.length) pool=buildPool();
+        // Chercher premier membre pas encore gagnant CE mois
+        var idx=-1;
+        for(var k=0;k<pool.length;k++){if(!done[pool[k].membre_id]){idx=k;break;}}
+        // Si tous deja gagnants ce mois, repart d'un nouveau pool
+        if(idx===-1){pool=buildPool();idx=0;}
+        var p=pool.splice(idx,1)[0];
+        done[p.membre_id]=true;
+        var estTrim=s>0&&s<=nbBonusTrim; // le 1er gagnant du mois est "normal", les suivants (jusqu'aux bonus dus) sont trimestriels
+        slots.push({tontine_id:tontineId,association_id:CA.id,mois_num:mois,mois_calendrier:ym,membre_id:p.membre_id,nb_parts_ce_mois:1,montant_gain:gainFixe,collecte_mois:col,surplus_fond:fond,est_mois_trim:estTrim});
+      }
+    }
+  } else {
+    // Gain Fixe (systeme original) : gain fixe = part x 12, mais le nombre
+    // de gagnants par mois depend des fonds disponibles (collecte + report),
+    // pas d'un calendrier trimestriel. Le dernier mois solde le pool restant
+    // pour garantir que tous les membres aient gagne en fin de cycle.
+    var poolRestant=N;
+    for(var mois2=1;mois2<=12;mois2++){
+      var ym2=tMoisLabel(mois2,moisDebut,anneeDebut);
+      var dispo2=col+fond;
+      var nbG2=gainFixe>0?Math.floor(dispo2/gainFixe):0;
+      if(nbG2>poolRestant)nbG2=poolRestant;
+      if(mois2===12&&poolRestant>0)nbG2=poolRestant;
+      fond=dispo2-(nbG2*gainFixe);
+      poolRestant-=nbG2;
+      var done2={};
+      for(var s2=0;s2<nbG2;s2++){
+        if(!pool.length) pool=buildPool();
+        var idx2=-1;
+        for(var k2=0;k2<pool.length;k2++){if(!done2[pool[k2].membre_id]){idx2=k2;break;}}
+        if(idx2===-1){pool=buildPool();idx2=0;}
+        var p2=pool.splice(idx2,1)[0];
+        done2[p2.membre_id]=true;
+        slots.push({tontine_id:tontineId,association_id:CA.id,mois_num:mois2,mois_calendrier:ym2,membre_id:p2.membre_id,nb_parts_ce_mois:1,montant_gain:gainFixe,collecte_mois:col,surplus_fond:fond,est_mois_trim:false});
+      }
+      if(poolRestant<=0)break;
     }
   }
   return slots;
@@ -3037,14 +3066,25 @@ function ouvrirNouveauCycle(){
       return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;'+(i>0?"border-top:1px solid var(--border)":"")+';background:var(--bg3);'+(inactif?"opacity:0.7":"")+'">'+
         avEl(m.id)+
         '<div style="flex:1;font-size:13px;font-weight:500;color:var(--text)">'+m.prenom+' '+m.nom+(inactif?' <span style="font-size:10px;color:var(--text3)">(inactif)</span>':'')+'</div>'+
-        '<div style="display:flex;align-items:center;gap:6px">'+
-        '<label style="font-size:11px;color:var(--text3)">Parts :</label>'+
+        '<div style="display:flex;align-items:center;gap:4px">'+
+        '<label style="font-size:11px;color:var(--text3);margin-right:2px">Parts :</label>'+
+        '<button type="button" onclick="stepPartMembre(\''+m.id+'\',-1)" style="width:24px;height:24px;line-height:1;border:1px solid var(--border);border-radius:4px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:14px">−</button>'+
         '<input type="number" id="t-part-'+m.id+'" min="0" value="'+(inactif?'0':'1')+'" oninput="verifierPariteTontine()" '+
-        'style="width:60px;text-align:center;padding:4px 6px;font-size:13px">'+
+        'style="width:44px;text-align:center;padding:4px 4px;font-size:13px">'+
+        '<button type="button" onclick="stepPartMembre(\''+m.id+'\',1)" style="width:24px;height:24px;line-height:1;border:1px solid var(--border);border-radius:4px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:14px">+</button>'+
         '</div></div>';
     }).join("")+
     '</div>'+
     '<button onclick="verifierPariteTontine()" style="margin-top:8px;background:none;border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;color:var(--text2);cursor:pointer;font-family:\'DM Sans\',sans-serif">🔍 Vérifier la parité</button>';
+  verifierPariteTontine();
+}
+
+function stepPartMembre(membreId,delta){
+  var el=E('t-part-'+membreId);
+  if(!el)return;
+  var v=(parseInt(el.value)||0)+delta;
+  if(v<0)v=0;
+  el.value=v;
   verifierPariteTontine();
 }
 
@@ -3073,26 +3113,29 @@ function verifierPariteTontine(){
   if(N<2){el.style.background='rgba(244,100,95,.08)';el.style.borderLeft='3px solid var(--red)';
     el.innerHTML='<strong style="color:var(--red)">❌ Minimum 2 parts requises</strong>';return;}
   if(methode==='pot'){
-    // RÈGLE : total parts DOIT = durée (chaque mois = 1 gagnant, équilibre parfait)
-    var gainPot=col; // N_parts × montant = collecte mensuelle
-    var diff=N-duree;
+    // Pot Mensuel (nouveau systeme) : gain fixe = part x 12, comme Gain Fixe,
+    // mais l'excedent au-dela de 12 parts (multiple de 3 obligatoire) genere
+    // un gagnant bonus supplementaire aux mois de fin de trimestre (3,6,9,12).
+    var gainPot=mp*12;
+    var excedentPot=Math.max(0,N-12);
     var p2=document.getElementById('m2-preview');
-    if(p2)p2.textContent=(gainPot>=1000?(gainPot/1000).toFixed(1)+'k':gainPot)+' '+getSym();
-    var nbMembresPot=MC.filter(function(m){return (parseInt((E('t-part-'+m.id)||{}).value)||0)>0;}).length;
-    if(diff===0){
-      el.style.background='rgba(62,207,142,.08)';el.style.borderLeft='3px solid var(--green)';
-      el.innerHTML='<strong style="color:var(--green)">&#x2705; '+N+' parts = '+duree+' mois — Equilibre parfait</strong><br>'
-        +'<span style="font-size:12px">Gain/gagnant : <strong style="color:var(--accent)">'+gainPot+' '+getSym()+'</strong>'
-        +' · Chaque membre cotise '+(mp*duree)+' '+getSym()+' et recoit '+gainPot+' '+getSym()+'</span>';
-    } else {
-      var manque2=Math.abs(diff);
-      var action=diff>0?'Retirer '+diff:'Ajouter '+manque2;
-      var delta2=diff>0?(0-diff):manque2;
+    if(p2)p2.textContent=(gainPot>=1000?(gainPot/1000).toFixed(0)+'k':gainPot)+' '+getSym();
+    if(excedentPot>0&&excedentPot%3!==0){
       el.style.background='rgba(244,100,95,.08)';el.style.borderLeft='3px solid var(--red)';
-      el.innerHTML='<strong style="color:var(--red)">&#x274C; '+N+' parts / '+duree+' mois — '+(diff>0?'Surplus '+diff:' Manque '+manque2)+' part(s)</strong><br>'
-        +'<span style="font-size:12px">Il faut exactement <strong>'+duree+'</strong> parts pour '+duree+' mois'
-        +' ('+nbMembresPot+' membres actifs = '+(nbMembresPot>0?Math.round(duree/nbMembresPot*10)/10:'-')+' parts/membre). '
-        +'<button onclick="repartirPartsPot('+duree+')" style="background:var(--accent);color:#1a1400;border:none;border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;margin-left:4px">&#x1F3B2; Répartir '+duree+' parts équitablement</button></span>';
+      var cibleBasse=12+Math.floor(excedentPot/3)*3,cibleHaute=cibleBasse+3;
+      el.innerHTML='<strong style="color:var(--red)">&#x274C; Pot Mensuel : au-delà de 12 parts, l\'excédent doit être un multiple de 3</strong><br>'
+        +'<span style="font-size:12px">Actuellement '+N+' parts, soit '+excedentPot+' en trop (non multiple de 3). '
+        +'<button onclick="ajusterParts('+cibleBasse+')" style="background:var(--accent);color:#1a1400;border:none;border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;margin-left:4px">Ramener à '+cibleBasse+'</button> '
+        +'<button onclick="ajusterParts('+cibleHaute+')" style="background:var(--accent);color:#1a1400;border:none;border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;margin-left:4px">Monter à '+cibleHaute+'</button></span>';
+    } else {
+      var moisFinTrimestrePreview=[3,6,9,12];
+      var bonusParMoisPreview={};
+      for(var up=0;up<excedentPot;up++){bonusParMoisPreview[moisFinTrimestrePreview[up%4]]=(bonusParMoisPreview[moisFinTrimestrePreview[up%4]]||0)+1;}
+      var bonusTxt=[3,6,9,12].filter(function(mo){return bonusParMoisPreview[mo];}).map(function(mo){return 'mois '+mo+' (+'+bonusParMoisPreview[mo]+')';}).join(', ');
+      el.style.background='rgba(62,207,142,.08)';el.style.borderLeft='3px solid var(--green)';
+      el.innerHTML='<strong style="color:var(--green)">&#x2705; '+N+' parts · Pot Mensuel</strong><br>'
+        +'<span style="font-size:12px">Gain/gagnant : <strong style="color:var(--accent)">'+gainPot+' '+getSym()+'</strong>'
+        +' · 1 gagnant/mois'+(excedentPot>0?' + bonus trimestriel : '+bonusTxt:' (aucun bonus, '+N+' ≤ 12 parts)')+'</span>';
     }
   } else {
     var gainFixe=mp*duree;
@@ -3136,28 +3179,6 @@ function ajusterParts(cible){
   verifierPariteTontine();
 }
 
-function ajusterPartsPot(delta){
-  // Gardé pour compatibilité — redirige vers repartirPartsPot
-  var duree=parseEntier((E("t-duree")||{}).value,{fallback:12,min:1,max:60});
-  repartirPartsPot(duree);
-}
-
-function repartirPartsPot(duree){
-  // Répartir exactement `duree` parts entre les membres actifs de façon équitable
-  var membres=MC.filter(function(m){return E('t-part-'+m.id);});
-  if(!membres.length)return;
-  // Reset toutes les parts à 0
-  membres.forEach(function(m){var el=E('t-part-'+m.id);if(el)el.value=0;});
-  // Distribuer les parts une par une en tournant (round-robin)
-  var base=Math.floor(duree/membres.length);
-  var reste=duree%membres.length;
-  membres.forEach(function(m,i){
-    var el=E('t-part-'+m.id);
-    if(el)el.value=base+(i<reste?1:0);
-  });
-  verifierPariteTontine();
-}
-
 function validerNouveauCycle(){
   if(window._tontineCreation)return;
   var nom=(E("t-nom")||{}).value.trim();
@@ -3178,11 +3199,8 @@ function validerNouveauCycle(){
   if(N<2){showErr("Attribuez au moins 2 parts");return;}
   var dureeCheck=parseEntier((E("t-duree")||{}).value,{fallback:12,min:1,max:60});
   var methodeCheck=(document.querySelector('input[name="t-methode"]:checked')||{}).value||"fixe";
-  if(methodeCheck==='pot'&&N!==dureeCheck){
-    showErr("Mode Pot Mensuel : il faut exactement "+dureeCheck+" parts (actuellement "+N+"). Utilisez le bouton de correction.");return;
-  }
-  if(methodeCheck==='fixe'&&N>12&&(N-12)%3!==0){
-    showErr("Gain Fixe : au-delà de 12 parts, l'excédent doit être un multiple de 3 (actuellement "+N+" parts, soit "+(N-12)+" en trop). Ajustez le nombre de parts.");return;
+  if(methodeCheck==='pot'&&N>12&&(N-12)%3!==0){
+    showErr("Pot Mensuel : au-delà de 12 parts, l'excédent doit être un multiple de 3 (actuellement "+N+" parts, soit "+(N-12)+" en trop). Ajustez le nombre de parts.");return;
   }
 
   // Désactiver le bouton
@@ -11054,7 +11072,7 @@ function payerStripe(type){
                 <input type="radio" name="t-methode" id="t-methode-2" value="pot" onchange="onMethodeChange();verifierPariteTontine()" style="margin-top:3px;accent-color:var(--accent)">
                 <div>
                   <div style="font-size:13px;font-weight:700;color:var(--text)">Pot mensuel (N × part)</div>
-                  <div style="font-size:11px;color:var(--text2);margin-top:2px">Le gagnant empoche toute la collecte du mois : <strong id="m2-preview">— €</strong>. 1 gagnant/mois, ordre aléatoire.</div>
+                  <div style="font-size:11px;color:var(--text2);margin-top:2px">Chaque gagnant reçoit <strong id="m2-preview">— €</strong> (montant × 12). Au-delà de 12 parts, l'excédent (multiple de 3) ajoute un gagnant bonus par trimestre.</div>
                 </div>
               </label>
             </div>
