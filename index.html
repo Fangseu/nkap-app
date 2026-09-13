@@ -5301,9 +5301,9 @@ function chargeMembrePortal(ud){
       sb.from("prets").select("*").eq("association_id",aid).eq("beneficiaire_id",mid).order("date_pret",{ascending:false}),
       sb.from("fonds_adhesion").select("solde").eq("association_id",aid).eq("membre_id",mid).maybeSingle(),
       // Tontine : cotisations dues par ce membre
-      sb.from("tontine_cotisations").select("*,tontines(nom,montant_part,statut)").eq("association_id",aid).eq("membre_id",mid).order("mois_calendrier",{ascending:true}),
+      sb.from("tontine_cotisations").select("*,tontines(nom,montant_part,statut,annee_debut,mois_debut)").eq("association_id",aid).eq("membre_id",mid).order("mois_calendrier",{ascending:true}),
       // Tontine : mois où ce membre gagne (tirage)
-      sb.from("tontine_tirage").select("*,tontines(nom,montant_part,statut)").eq("association_id",aid).eq("membre_id",mid).order("mois_num",{ascending:true}),
+      sb.from("tontine_tirage").select("*,tontines(nom,montant_part,statut,annee_debut,mois_debut)").eq("association_id",aid).eq("membre_id",mid).order("mois_num",{ascending:true}),
       // Tontine : distributions déjà versées à ce membre
       sb.from("tontine_distributions").select("*").eq("association_id",aid).eq("membre_id",mid),
       // Tontine : échanges en attente où ce membre est accepteur
@@ -5549,15 +5549,32 @@ function renderMembrePortal(m,mid,aid){
     (function(){
       var tCots2=d.tCots||[],tTirage2=d.tTirage||[],tDistribs2=d.tDistribs||[],tEchanges2=d.tEchanges||[];
       var cycles={};
+      function _initCycle(tId,tRef){
+        cycles[tId]={
+          nom:(tRef&&tRef.nom)||"Tontine",
+          statut:(tRef&&tRef.statut)||"",
+          anneeDebut:(tRef&&tRef.annee_debut)||0,
+          moisDebut:(tRef&&tRef.mois_debut)||0,
+          cots:[],gains:[]
+        };
+      }
       tCots2.forEach(function(c){
         var tId=c.tontine_id;
-        if(!cycles[tId])cycles[tId]={nom:(c.tontines&&c.tontines.nom)||"Tontine",statut:(c.tontines&&c.tontines.statut)||"",cots:[],gains:[]};
+        if(!cycles[tId])_initCycle(tId,c.tontines);
         cycles[tId].cots.push(c);
       });
       tTirage2.forEach(function(t2){
         var tId=t2.tontine_id;
-        if(!cycles[tId])cycles[tId]={nom:(t2.tontines&&t2.tontines.nom)||"Tontine",statut:(t2.tontines&&t2.tontines.statut)||"",cots:[],gains:[]};
+        if(!cycles[tId])_initCycle(tId,t2.tontines);
         cycles[tId].gains.push(t2);
+      });
+      // Tri : cycle le plus récent en premier (année/mois de début), puis
+      // par nom de tontine — pour ne pas mélanger les cycles au hasard.
+      var cycleIdsTries=Object.keys(cycles).sort(function(a,b){
+        var ca=cycles[a],cb=cycles[b];
+        var da=ca.anneeDebut*100+ca.moisDebut,db=cb.anneeDebut*100+cb.moisDebut;
+        if(db!==da)return db-da;
+        return (ca.nom||"").localeCompare(cb.nom||"");
       });
       var html='';
       // ── Versements à confirmer ─────────────────────────────────
@@ -5604,7 +5621,7 @@ function renderMembrePortal(m,mid,aid){
         });
         html+='</div>';
       }
-      Object.keys(cycles).forEach(function(tId){
+      cycleIdsTries.forEach(function(tId){
         var cy=cycles[tId];
         var cotImp=cy.cots.filter(function(c){return c.statut==="en_attente"||c.statut==="impaye";});
         var cotPay=cy.cots.filter(function(c){return c.statut==="valide";});
@@ -5755,15 +5772,31 @@ function renderMembrePortal(m,mid,aid){
 
       // Grouper les cotisations tontine par cycle
       var cycles={};
+      function _initCycleAccueil(tId,tRef){
+        cycles[tId]={
+          nom:(tRef&&tRef.nom)||"Tontine",
+          statut:(tRef&&tRef.statut)||"",
+          anneeDebut:(tRef&&tRef.annee_debut)||0,
+          moisDebut:(tRef&&tRef.mois_debut)||0,
+          cots:[],gains:[]
+        };
+      }
       tCots.forEach(function(c){
         var tId=c.tontine_id;
-        if(!cycles[tId])cycles[tId]={nom:(c.tontines&&c.tontines.nom)||"Tontine",statut:(c.tontines&&c.tontines.statut)||"",cots:[],gains:[]};
+        if(!cycles[tId])_initCycleAccueil(tId,c.tontines);
         cycles[tId].cots.push(c);
       });
       tTirage.forEach(function(t){
         var tId=t.tontine_id;
-        if(!cycles[tId])cycles[tId]={nom:(t.tontines&&t.tontines.nom)||"Tontine",statut:(t.tontines&&t.tontines.statut)||"",cots:[],gains:[]};
+        if(!cycles[tId])_initCycleAccueil(tId,t.tontines);
         cycles[tId].gains.push(t);
+      });
+      // Tri : cycle le plus récent en premier, puis nom de tontine
+      var cycleIdsTries=Object.keys(cycles).sort(function(a,b){
+        var ca=cycles[a],cb=cycles[b];
+        var da=ca.anneeDebut*100+ca.moisDebut,db=cb.anneeDebut*100+cb.moisDebut;
+        if(db!==da)return db-da;
+        return (ca.nom||"").localeCompare(cb.nom||"");
       });
 
       var html='<div class="card" style="margin-top:18px;border-color:rgba(26,158,122,.3)">';
@@ -5811,7 +5844,7 @@ function renderMembrePortal(m,mid,aid){
         html+='</div>';
       }
 
-      Object.keys(cycles).forEach(function(tId){
+      cycleIdsTries.forEach(function(tId){
         var cy=cycles[tId];
         var sym2=sym;
 
