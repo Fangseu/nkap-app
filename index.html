@@ -5621,13 +5621,27 @@ function renderMembrePortal(m,mid,aid){
         });
         html+='</div>';
       }
-      cycleIdsTries.forEach(function(tId){
+      // Filtre par saison : n'a de sens que s'il y a plus d'un cycle à trier.
+      var saisonsCycles=cycleIdsTries.map(function(tId){
         var cy=cycles[tId];
+        return cy.anneeDebut?saisonDe(cy.anneeDebut+"-"+(cy.moisDebut<10?"0":"")+(cy.moisDebut||1)+"-01"):"";
+      });
+      if(cycleIdsTries.length>1){
+        var saisonsUniques=Array.from(new Set(saisonsCycles.filter(Boolean))).sort(function(a,b){return b-a;});
+        html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+
+          '<select id="mbt-tontine-filtre-saison" onchange="filtrerMbTontine()" style="width:auto">'+
+          '<option value="toutes">Toutes les saisons</option>'+
+          saisonsUniques.map(function(s){return '<option value="'+s+'">Saison '+(s-1)+'-'+s+'</option>';}).join('')+
+          '</select></div>';
+      }
+      cycleIdsTries.forEach(function(tId,idx){
+        var cy=cycles[tId];
+        var saisonCycle=saisonsCycles[idx];
         var cotImp=cy.cots.filter(function(c){return c.statut==="en_attente"||c.statut==="impaye";});
         var cotPay=cy.cots.filter(function(c){return c.statut==="valide";});
         var totDu=cy.cots.reduce(function(s,c){return s+(+c.montant_du);},0);
         var totPay=cotPay.reduce(function(s,c){return s+(+c.montant_du);},0);
-        html+='<div class="card" style="margin-bottom:14px"><div class="card-title">🎰 '+cy.nom+' '+tStatutBadge(cy.statut)+'</div>';
+        html+='<div class="card mbt-tontine-cycle" data-saison="'+saisonCycle+'" style="margin-bottom:14px"><div class="card-title">🎰 '+cy.nom+' '+tStatutBadge(cy.statut)+'</div>';
         if(cy.gains.length){
           html+='<div style="font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🏆 Mes mois de gain</div>'+
             '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">';
@@ -5996,6 +6010,17 @@ function _mbNavCard(tabId,icon,title,sub){
     '<div style="font-size:20px;margin-bottom:4px">'+icon+'</div>'+
     '<div style="font-size:13px;font-weight:700;color:var(--text)">'+title+'</div>'+
     '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+sub+'</div></button>';
+}
+
+// Filtre les cartes de cycles tontine (onglet Tontine, espace membre) par
+// saison, sans re-générer le HTML — simple bascule d'affichage.
+function filtrerMbTontine(){
+  var sel=E('mbt-tontine-filtre-saison');
+  var val=sel?sel.value:'toutes';
+  document.querySelectorAll('.mbt-tontine-cycle').forEach(function(card){
+    var s=card.getAttribute('data-saison');
+    card.style.display=(val==='toutes'||!s||s===val)?'':'none';
+  });
 }
 
 function switchMbTab(tabId,noSave){
