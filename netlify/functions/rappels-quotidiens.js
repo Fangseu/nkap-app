@@ -210,6 +210,50 @@ async function traiterCotisations(assoc) {
   await sbUpsert("notif_daily_state", { association_id: assoc.id, type: "cotisations", last_date: td() });
 }
 
+// Rappelle aux participants d'un projet qui n'ont pas encore soldé leur
+// quote-part, une semaine avant la date limite de paiement du projet, combien
+// il leur reste à payer et le nombre de jours restants. Un seul rappel par
+// participant (rappel_delai_envoye), même si le cron tourne plusieurs jours
+// de suite pendant la fenêtre des 7 jours.
+async function traiterProjets(assoc) {
+  const dans7j = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const projets = await sbGet(
+    "projets",
+    `association_id=eq.${assoc.id}&statut=eq.ouvert&date_limite=gte.${td()}&date_limite=lte.${dans7j}&select=id,nom,date_limite`
+  );
+  if (!projets.length) return;
+
+  const sym = { EUR: "€", USD: "$", GBP: "£", XAF: "FCFA", XOF: "CFA" }[assoc.devise] || assoc.devise || "€";
+
+  for (const p of projets) {
+    const parts = await sbGet(
+      "projets_participants",
+      `projet_id=eq.${p.id}&solde_restant=gt.0&rappel_delai_envoye=eq.false&select=id,membre_id,solde_restant`
+    );
+    if (!parts.length) continue;
+
+    const diffJours = Math.max(0, Math.round((new Date(p.date_limite) - new Date(td())) / 86400000));
+    const dateLimiteStr = new Date(p.date_limite).toLocaleDateString("fr-FR");
+    const membreIds = [...new Set(parts.map((pp) => pp.membre_id))];
+    const membres = await sbGet("membres", `id=in.(${membreIds.join(",")})&select=id,prenom,nom,email,tel`);
+
+    for (const pp of parts) {
+      const mb = membres.find((m) => m.id === pp.membre_id);
+      if (!mb) continue;
+      await envoyerEmail(mb.email, `⏳ Projet « ${p.nom} » — ${diffJours} jour(s) restant(s) — ${assoc.nom}`, "rappel_projet", {
+        assoc: assoc.nom,
+        membre: `${mb.prenom} ${mb.nom}`,
+        projet: p.nom,
+        montant: `${pp.solde_restant} ${sym}`,
+        jours: String(diffJours),
+        date_limite: dateLimiteStr,
+      });
+      await envoyerWhatsApp(mb.tel, "rappel_projet", [p.nom, `${pp.solde_restant} ${sym}`, String(diffJours)], assoc.nom);
+      await sbPatch("projets_participants", `id=eq.${pp.id}`, { rappel_delai_envoye: true });
+    }
+  }
+}
+
 // Alerte au bureau (comptes admin actifs) : paiements déclarés par des membres en attente de validation
 // Fréquence : tous les 2 jours (pas quotidien, pour éviter de sursolliciter le bureau)
 async function traiterDeclarationsEnAttente(assoc) {
@@ -257,6 +301,7 @@ exports.handler = async function () {
       await traiterReunions(assoc);
       await traiterTontine(assoc);
       await traiterCotisations(assoc);
+      await traiterProjets(assoc);
       await traiterDeclarationsEnAttente(assoc);
     } catch (e) {
       console.error("[rappels] erreur association", assoc.id, e.message);

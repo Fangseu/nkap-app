@@ -951,9 +951,9 @@ function G(p){
   else if(p==="adhesion-paiements"){pSels();rAdh();}
   else if(p==="adhesion-nouveau")pSels();
   else if(p==="retards-liste"){pSels();rRets();}
-  else if(p==="retards-nouveau")pSels();
+  else if(p==="retards-nouveau"){pSels();pSelsReunions();}
   else if(p==="amendes-liste"){pSels();rAms();}
-  else if(p==="amendes-nouvelle")pSels();
+  else if(p==="amendes-nouvelle"){pSels();pSelsReunions();}
   else if(p==="dons-liste"){pSels2();rDons();}
   else if(p==="dons-remboursements"){pSels2();rDons();}
   else if(p==="dons-nouveau"){pSels();pSels2();}
@@ -1004,6 +1004,14 @@ function pSels(){
   var opts=MC.filter(function(m){return m.statut==="actif";}).map(function(m){return '<option value="'+m.id+'">'+ esc(m.prenom)+' '+esc(m.nom)+'</option>';}).join('');
   ["cot-m","adh-m","ret-m","am-m","am-membre","don-benef","pret-benef","pret-int-benef","vir-membre","proj-remb-filter"].forEach(function(id){var e=E(id);if(e)e.innerHTML='<option value="">-- Membre --</option>'+opts;});
   var fe=E("cot-fm");if(fe)fe.innerHTML='<option value="">Tous les membres</option>'+opts;
+}
+function pSelsReunions(){
+  if(!CA)return;
+  sb.from("reunions").select("id,titre,date_reunion").eq("association_id",CA.id).order("date_reunion",{ascending:false}).limit(30).then(function(r){
+    var opts='<option value="">-- Non liée à une réunion --</option>'+
+      (r.data||[]).map(function(ru){return '<option value="'+ru.id+'">'+fdD(ru.date_reunion)+' — '+esc(ru.titre||'')+'</option>';}).join('');
+    ["ret-reun","am-reun"].forEach(function(id){var e=E(id);if(e)e.innerHTML=opts;});
+  });
 }
 function pSels2(){
   var opts=MC.filter(function(m){return m.statut==="actif";}).map(function(m){return '<option value="'+m.id+'">'+ esc(m.prenom)+' '+esc(m.nom)+'</option>';}).join('');
@@ -2016,7 +2024,7 @@ function rDash(){
         '<div class="stat-card '+(soldeFondCot>=0?"green":"red")+'"><div class="stat-label">Solde fond cotisation</div><div class="stat-val" style="color:'+(soldeFondCot>=0?"var(--green)":"var(--red)")+'">'+ fmt(soldeFondCot)+' '+sym+'</div><div class="stat-sub">Cotis. + Tontines - Virements</div></div>'+
         '<div class="stat-card blue"><div class="stat-label">Fond adhésion total</div><div class="stat-val">'+fmt(totalFonds)+' '+sym+'</div><div class="stat-sub">Brut</div></div>'+
         '<div class="stat-card '+(soldeReel>=0?"green":"red")+'"><div class="stat-label">Fond adhésion disponible</div><div class="stat-val" style="color:'+(soldeReel>=0?"var(--green)":"var(--red)")+'">'+ fmt(soldeReel)+' '+sym+'</div><div class="stat-sub">Après dons en cours</div></div>'+
-        '<div class="stat-card '+(projEC>0?"yellow":"green")+'"><div class="stat-label">Projets — restant dû</div><div class="stat-val">'+fmt(projEC)+' '+sym+'</div><div class="stat-sub">Remboursements en cours</div></div>'+
+        '<div class="stat-card '+(projEC>0?"yellow":"green")+'"><div class="stat-label">Projets — restant dû</div><div class="stat-val">'+fmt(projEC)+' '+sym+'</div><div class="stat-sub">Versements en cours</div></div>'+
         '<div class="stat-card red"><div class="stat-label">Sanctions impayées</div><div class="stat-val">'+fmt(totR+totA)+' '+sym+'</div><div class="stat-sub">Retards + amendes</div></div>'+
         '<div class="stat-card '+(soldeCaisse>=0?"green":"red")+'"><div class="stat-label">Solde caisse</div><div class="stat-val" style="color:'+(soldeCaisse>=0?"var(--green)":"var(--red)")+'">'+ fmt(soldeCaisse)+' '+sym+'</div><div class="stat-sub">Retards+Amendes-Sorties</div></div>'
       );
@@ -2055,7 +2063,7 @@ function rDash(){
         .sort(function(a,b){return b.count-a.count;}).slice(0,3);
       var medals=["🥇","🥈","🥉"];
 
-      // Évolution caisse — 6 derniers mois
+      // Données mensuelles caisse (nécessaires pour "Solde net ce mois")
       var now=new Date();
       var moisLabels=[],moisKeys=[];
       for(var mi=5;mi>=0;mi--){
@@ -2071,22 +2079,13 @@ function rDash(){
         var s2=sorties.filter(function(x){return (x.date_sortie||"").slice(0,7)===mk;}).reduce(function(s,x){return s+(+x.montant);},0);
         return {label:mk,entrees:e,sorties:s2,net:e-s2};
       });
-      var cumul=0,cumData=caisseParMois.map(function(m){cumul+=m.net;return cumul;});
-      var allV=cumData.concat(caisseParMois.map(function(m){return m.entrees;}));
-      var vMax=Math.max.apply(null,allV.filter(function(v){return v>0;}))||1;
-      var svgW=300,svgH=80;
-      var pts=cumData.map(function(v,i){
-        var x=Math.round((i/(moisKeys.length-1||1))*(svgW-20)+10);
-        var y=Math.round(svgH-6-(Math.max(0,v)/vMax)*(svgH-16));
-        return x+","+y;
-      });
       var netMois=caisseParMois[caisseParMois.length-1];
       var colNet=netMois.net>=0?"var(--green)":"var(--red)";
 
       var medals=["🥇","🥈","🥉"];
 
-      // Grille 3 colonnes : Top présences | Évolution caisse | Solde net ce mois
-      var topH='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">'+
+      // Grille 2 colonnes : Top présences | Solde net ce mois
+      var topH='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'+
         // Col 1 — Top présences
         '<div class="card"><div class="card-title">🏆 Top présences <span style="font-size:11px;color:var(--text3);font-weight:400">(5 dernières réunions)</span></div>'+
         (sortedPres.length?sortedPres.map(function(x,i){
@@ -2099,41 +2098,7 @@ function rDash(){
             '<span style="font-size:12px;font-weight:700;color:var(--green);flex-shrink:0">'+pct+'%</span></div>';
         }).join(""):'<div class="empty">Pas de données</div>')+
         '</div>'+
-        // Col 2 — Évolution caisse
-        '<div class="card">'+
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
-        '<div class="card-title" style="margin:0;font-size:13px">📈 Évolution caisse</div>'+
-        '<span style="font-size:11px;color:var(--text3)">6 mois</span>'+
-        '</div>'+
-        '<div style="display:flex;align-items:flex-end;gap:2px;height:56px;margin-bottom:4px">'+
-        caisseParMois.map(function(m,i){
-          var hE=vMax>0?Math.max(2,Math.round((m.entrees/vMax)*48)):0;
-          var hS=vMax>0?Math.max(m.sorties>0?2:0,Math.round((m.sorties/vMax)*48)):0;
-          var cur=i===moisKeys.length-1;
-          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px">'+
-            '<div style="width:100%;display:flex;gap:1px;align-items:flex-end;height:48px">'+
-            '<div style="flex:1;background:var(--green);opacity:'+(cur?1:0.5)+';border-radius:2px 2px 0 0;height:'+hE+'px"></div>'+
-            '<div style="flex:1;background:var(--red);opacity:'+(cur?1:0.5)+';border-radius:2px 2px 0 0;height:'+hS+'px"></div>'+
-            '</div>'+
-            '<div style="font-size:9px;color:var(--text3);white-space:nowrap">'+moisLabels[i].split(" ")[0]+'</div>'+
-            '</div>';
-        }).join("")+
-        '</div>'+
-        '<svg width="100%" viewBox="0 0 '+svgW+' '+svgH+'" style="overflow:visible">'+
-        '<polyline points="'+pts.join(" ")+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
-        pts.map(function(p,i){
-          var xy=p.split(",");
-          var col=cumData[i]>=0?"var(--green)":"var(--red)";
-          return '<circle cx="'+xy[0]+'" cy="'+xy[1]+'" r="3" fill="'+col+'" stroke="var(--bg2)" stroke-width="1.5"/>';
-        }).join("")+
-        '</svg>'+
-        '<div style="display:flex;gap:10px;margin-top:4px;font-size:10px;color:var(--text3)">'+
-        '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:1px;background:var(--green);display:inline-block"></span>Entrées</span>'+
-        '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:1px;background:var(--red);display:inline-block"></span>Sorties</span>'+
-        '<span style="display:flex;align-items:center;gap:3px"><span style="width:14px;height:2px;background:var(--accent);display:inline-block"></span>Cumul</span>'+
-        '</div>'+
-        '</div>'+
-        // Col 3 — Solde net ce mois
+        // Col 2 — Solde net ce mois
         '<div class="card">'+
         '<div class="card-title" style="font-size:13px">💰 Solde net ce mois</div>'+
         '<div style="text-align:center;padding:12px 0">'+
@@ -2142,10 +2107,6 @@ function rDash(){
         '<div style="display:flex;justify-content:center;gap:16px;margin-top:14px;font-size:12px">'+
         '<div><div style="color:var(--green);font-weight:600">+'+fmt(netMois.entrees)+' '+sym+'</div><div style="font-size:10px;color:var(--text3)">Entrées</div></div>'+
         '<div><div style="color:var(--red);font-weight:600">-'+fmt(netMois.sorties)+' '+sym+'</div><div style="font-size:10px;color:var(--text3)">Sorties</div></div>'+
-        '</div>'+
-        '<div style="margin-top:12px;font-size:11px;color:var(--text3)">Cumul net 6 mois</div>'+
-        '<div style="font-size:16px;font-weight:700;color:'+(cumData[cumData.length-1]>=0?"var(--green)":"var(--red)") +'">'+
-        (cumData[cumData.length-1]>=0?"+":"")+fmt(cumData[cumData.length-1])+' '+sym+'</div>'+
         '</div>'+
         '</div>'+
         '</div>';
@@ -2166,15 +2127,14 @@ function rDash(){
       var fh=MC.filter(function(m){return m.statut==="actif";}).map(function(m){
         var fond=FC[m.id]||0;
         var engM=rembs.filter(function(r){return r.membre_id===m.id;}).reduce(function(s,r){return s+(+r.montant);},0);
-        var projM=projParts.filter(function(p){return p.membre_id===m.id&&p.solde_restant>0;}).reduce(function(s,p){return s+(+p.solde_restant);},0);
-        var soldeM=+(fond-engM-projM).toFixed(2);
+        var soldeM=+(fond-engM).toFixed(2);
         var pct=totalFonds>0?Math.min(100,Math.round(fond/totalFonds*100)):0;
         var col=soldeM>=0?"var(--green)":"var(--red)";
         return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'+avEl(m.id)+
           '<div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px">'+
           '<span>'+m.prenom+" "+m.nom+'</span>'+
           '<span style="font-weight:600">'+fmt(fond)+' '+sym+
-          (engM+projM>0?' <span style="color:var(--red);font-size:11px">(-'+fmt(engM+projM)+')</span>':'')+
+          (engM>0?' <span style="color:var(--red);font-size:11px">(-'+fmt(engM)+')</span>':'')+
           ' = <span style="color:'+col+'">'+fmt(soldeM)+' '+sym+'</span></span>'+
           '</div><div class="progress-bar-container"><div class="progress-bar" style="width:'+pct+'%"></div></div></div></div>';
       }).join("");
@@ -2211,17 +2171,6 @@ function rDash(){
         sH("dash-caisses-perso","");
       }
 
-      // Résumé financier
-      sH("dash-resume",
-        '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--text2)">Fond adhésion brut</span><span style="font-weight:500">'+fmt(totalFonds)+' '+sym+'</span></div>'+
-        '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--text2)">Engagés (dons/projets)</span><span style="font-weight:500;color:var(--red)">-'+fmt(totRembAttente+projEC)+' '+sym+'</span></div>'+
-        '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;font-weight:600"><span>Disponible</span><span style="color:'+(soldeReel>=0?"var(--green)":"var(--red)")+'">'+fmt(soldeReel)+' '+sym+'</span></div>'+
-        '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--text2)">Cotisations perçues</span><span style="font-weight:500;color:var(--green)">+'+fmt(totC)+' '+sym+'</span></div>'+
-        (totTontCots>0?'<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--text2)">🎰 Tontines — collecte</span><span style="font-weight:500;color:var(--green)">+'+fmt(totTontCots)+' '+sym+'</span></div>':'')+
-        (totTontGains>0?'<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--text2)">🎰 Tontines — gains versés</span><span style="font-weight:500;color:var(--red)">-'+fmt(totTontGains)+' '+sym+'</span></div>':'')+
-        '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--text2)">Virements membres</span><span style="font-weight:500;color:var(--red)">-'+fmt(totVirements)+' '+sym+'</span></div>'+
-        '<div style="display:flex;justify-content:space-between;padding:10px 0;font-size:13px;font-weight:600"><span>Solde fond cotisation</span><span style="color:'+(soldeFondCot>=0?"var(--green)":"var(--red)")+'">'+fmt(soldeFondCot)+' '+sym+'</span></div>'
-      );
       var planEl=E("sb-plan");
       if(planEl)planEl.textContent="Plan "+(plan.charAt(0).toUpperCase()+plan.slice(1));
     }).catch(function(err){console.log("rDash error:",err);});
@@ -4829,19 +4778,25 @@ function genererPV(reunId){
     var aLheure=presents.filter(function(id){return !retardsList.find(function(x){return x.membreId===id;});});
     var totRetards=retardsList.reduce(function(s,x){return s+x.montant;},0);
 
-    // Charger amendes + données pour calculer les 3 soldes en parallèle
+    // Charger amendes + données pour calculer les 3 soldes en parallèle.
+    // Caisse principale et Fond cotisations sont recalculés en ne retenant que
+    // les opérations dont la date est <= date de la réunion, pour que le PV
+    // reflète toujours le solde tel qu'il était CE jour-là (pas le solde live
+    // au moment où on régénère/relit le PV plus tard) — ainsi on peut toujours
+    // retrouver combien il y avait en caisse à une réunion passée, même si le
+    // solde a changé depuis.
     Promise.all([
       sb.from("amendes").select("*,membres(prenom,nom)").eq("reunion_id",reunId),
-      // Fond caisse = retards payés + amendes payées - sorties caisse
-      sb.from("retards").select("montant,statut").eq("association_id",aid),
-      sb.from("amendes").select("montant,statut").eq("association_id",aid),
-      sb.from("sorties_caisse").select("montant").eq("association_id",aid),
-      // Fond cotisations = cotisations payées - virements sortants
-      sb.from("cotisations").select("montant,statut").eq("association_id",aid),
-      sb.from("virements_cotisation").select("montant").eq("association_id",aid),
-      // Fond adhésion
+      // Fond caisse = retards payés + amendes payées - sorties caisse, jusqu'à la date du PV
+      sb.from("retards").select("montant,statut,date_paiement").eq("association_id",aid).lte("date_paiement",ru.date_reunion),
+      sb.from("amendes").select("montant,statut,date_paiement").eq("association_id",aid).lte("date_paiement",ru.date_reunion),
+      sb.from("sorties_caisse").select("montant,date_sortie").eq("association_id",aid).lte("date_sortie",ru.date_reunion),
+      // Fond cotisations = cotisations payées - virements sortants, jusqu'à la date du PV
+      sb.from("cotisations").select("montant,statut,date_paiement").eq("association_id",aid).lte("date_paiement",ru.date_reunion),
+      sb.from("virements_cotisation").select("montant,date_virement").eq("association_id",aid).lte("date_virement",ru.date_reunion),
+      // Fond adhésion (solde courant — voir note plus bas)
       sb.from("fonds_adhesion").select("solde").eq("association_id",aid).maybeSingle(),
-      sb.from("adhesions").select("montant,statut").eq("association_id",aid),
+      sb.from("adhesions").select("montant,statut,date_paiement").eq("association_id",aid).lte("date_paiement",ru.date_reunion),
       // Versements tontine liés à cette réunion
       sb.from("tontine_distributions").select("*").eq("association_id",aid).eq("reunion_id",reunId)
     ]).then(function(rs){
@@ -4983,10 +4938,10 @@ function genererPV(reunId){
         '<tr><td>Retards collectés lors de cette séance</td><td style="text-align:right;font-weight:bold">'+totRetards+' '+sym+'</td></tr>'+
         '<tr><td>Amendes générées lors de cette séance</td><td style="text-align:right;font-weight:bold">'+totAmendes+' '+sym+'</td></tr>'+
         '<tr class="total-row"><td>Total sanctions séance</td><td style="text-align:right">'+(totRetards+totAmendes)+' '+sym+'</td></tr>'+
-        '<tr><td colspan="2" style="padding:6px 10px;background:#f5f5f5;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#666;font-weight:bold">État des caisses au moment du PV</td></tr>'+
+        '<tr><td colspan="2" style="padding:6px 10px;background:#f5f5f5;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#666;font-weight:bold">État des caisses à la date de la réunion ('+fdD(ru.date_reunion)+')</td></tr>'+
         '<tr><td>💰 Caisse principale</td><td style="text-align:right;font-weight:bold;color:#1a7a4a">'+soldeCaisse+' '+sym+'</td></tr>'+
         '<tr><td>📋 Fond cotisations</td><td style="text-align:right;font-weight:bold;color:#1a7a4a">'+soldeCotisations+' '+sym+'</td></tr>'+
-        '<tr><td>🤝 Fond adhésion</td><td style="text-align:right;font-weight:bold;color:#1a7a4a">'+soldeFondAdhesion+' '+sym+'</td></tr>'+
+        '<tr><td>🤝 Fond adhésion <span style="font-weight:normal;color:#999;font-size:10px">(solde actuel)</span></td><td style="text-align:right;font-weight:bold;color:#1a7a4a">'+soldeFondAdhesion+' '+sym+'</td></tr>'+
         '<tr class="total-row"><td>Total général des fonds</td><td style="text-align:right;color:#1a7a4a">'+(soldeCaisse+soldeCotisations+soldeFondAdhesion)+' '+sym+'</td></tr>'+
         '</tbody></table></section>'+
 
@@ -8841,7 +8796,12 @@ function rProjets(){
         var nb=pp.length;
         var qp=nb?+(p.montant_total/nb).toFixed(2):0;
         var tous_ok=nb&&pp.every(function(x){return x.solde_restant<=0;});
-        var statut=tous_ok?"<span class='badge badge-green'>Soldé</span>":"<span class='badge badge-yellow'>En cours</span>";
+        var cloture=p.statut==="cloture";
+        var statut=cloture?"<span class='badge badge-gray'>Clôturé</span>":(tous_ok?"<span class='badge badge-green'>Financé</span>":"<span class='badge badge-yellow'>En cours</span>");
+        var actions=cloture?"<span style='color:var(--text3);font-size:12px'>--</span>":
+          (p.caisse_id?"<button class='btn btn-secondary btn-sm' onclick=\"voirCaisseProjet('"+p.caisse_id+"','"+escH(p.nom).replace(/'/g,"\\'")+"')\">💰 Caisse</button> ":"")+
+          "<button class='btn btn-primary btn-sm' onclick='cloturerProjet(\""+p.id+"\")'>Clôturer</button> "+
+          "<button class='btn btn-d btn-sm' onclick='delProjet(\""+p.id+"\")'>Suppr.</button>";
         return "<tr>"+
           "<td><strong>"+escH(p.nom)+"</strong>"+(p.description?"<br><small style='color:var(--text3)'>"+escH(p.description.substring(0,40))+"...</small>":"")+"</td>"+
           "<td>"+fmt(p.montant_total)+" "+sym+"</td>"+
@@ -8850,7 +8810,7 @@ function rProjets(){
           "<td>"+fdD(p.date)+"</td>"+
           "<td>"+(p.reunion_id?'<span class="badge badge-blue">Lié</span>':"--")+"</td>"+
           "<td>"+statut+"</td>"+
-          "<td><button class='btn btn-d btn-sm' onclick='delProjet(\""+p.id+"\")'>Suppr.</button></td>"+
+          "<td style='display:flex;gap:5px;flex-wrap:wrap'>"+actions+"</td>"+
           "</tr>";
       }).join("");
     });
@@ -8894,6 +8854,7 @@ function rProjRemb(){
       var statut=pp.solde_restant<=0
         ?"<span class='badge badge-green'>Soldé ✓</span>"
         :(enRetard?"<span class='badge badge-red'>En retard</span>":"<span class='badge badge-yellow'>En cours</span>");
+      var projNomEsc=escH(proj.nom||"").replace(/'/g,"\\'");
       return "<tr>"+
         "<td><strong>"+escH(proj.nom||"--")+"</strong></td>"+
         "<td>"+mChip(pp.membre_id)+"</td>"+
@@ -8902,46 +8863,48 @@ function rProjRemb(){
         "<td style='color:"+(pp.solde_restant>0?(enRetard?"var(--red)":"var(--accent)"):"var(--text3)")+"'>"+fmt(pp.solde_restant)+" "+sym+"</td>"+
         "<td style='color:"+(enRetard?"var(--red)":"var(--text)")+";'>"+fdD(pp.date_echeance)+(enRetard?" <span style='font-size:10px;background:var(--red);color:#fff;padding:1px 5px;border-radius:4px'>retard</span>":"")+"</td>"+
         "<td>"+statut+"</td>"+
-        "<td>"+(pp.solde_restant>0?"<button class='btn btn-secondary btn-sm' style='color:var(--green)' onclick='acomptePP(\""+pp.id+"\","+pp.solde_restant+",\""+pp.membre_id+"\",\""+pp.projet_id+"\")'>Acompte</button>":"--")+"</td>"+
+        "<td style='display:flex;gap:5px'>"+(pp.solde_restant>0?
+          "<button class='btn btn-secondary btn-sm' style='color:var(--green)' onclick='acomptePP(\""+pp.id+"\","+pp.solde_restant+",\""+pp.membre_id+"\",\""+pp.projet_id+"\",\""+(proj.caisse_id||"")+"\",\""+projNomEsc+"\")'>Acompte</button>"+
+          "<button class='btn btn-primary btn-sm' onclick='soldeTotalPP(\""+pp.id+"\","+pp.solde_restant+",\""+pp.membre_id+"\",\""+pp.projet_id+"\",\""+(proj.caisse_id||"")+"\",\""+projNomEsc+"\")'>Solde total</button>"
+          :"--")+"</td>"+
         "</tr>";
     }).join("");
   });
 }
 
-// Acompte sur un remboursement de projet
-function acomptePP(ppId, soldeRestant, membreId, projetId){
+// Versement d'un membre sur son projet (acompte partiel ou solde total) —
+// l'argent entre réellement dans la caisse dédiée du projet.
+function acomptePP(ppId, soldeRestant, membreId, projetId, caisseId, projNom){
   var sym=(typeof getDevSymbol==="function")?getDevSymbol():"€";
-  var montantStr=prompt("Montant de l'acompte (max "+fmt(soldeRestant)+" "+sym+") :");
+  var montantStr=prompt("Montant du versement (max "+fmt(soldeRestant)+" "+sym+") :");
   if(!montantStr)return;
   var montant=parseMontant(montantStr);
   if(isNaN(montant)||montant<=0){alert("Montant invalide.");return;}
   if(montant>soldeRestant+0.01){alert("Le montant dépasse le solde restant ("+fmt(soldeRestant)+" "+sym+").");return;}
+  _enregistrerVersementProjet(ppId,montant,soldeRestant,membreId,projetId,caisseId,projNom);
+}
+
+// Solde le compte en une fois (paiement de la totalité du restant dû)
+function soldeTotalPP(ppId, soldeRestant, membreId, projetId, caisseId, projNom){
+  var sym=(typeof getDevSymbol==="function")?getDevSymbol():"€";
+  if(!confirm("Enregistrer le paiement du solde total : "+fmt(soldeRestant)+" "+sym+" ?"))return;
+  _enregistrerVersementProjet(ppId,soldeRestant,soldeRestant,membreId,projetId,caisseId,projNom);
+}
+
+function _enregistrerVersementProjet(ppId,montant,soldeRestant,membreId,projetId,caisseId,projNom){
   var nvSolde=+(Math.max(0,soldeRestant-montant)).toFixed(2);
-  // Mettre à jour le solde restant du participant
   sb.from("projets_participants").update({solde_restant:nvSolde}).eq("id",ppId).then(function(r){
     if(r.error){toastErr("Erreur: "+r.error.message);return;}
-    // Recréditer le fond adhésion du membre
-    sb.from("fonds_adhesion").select("solde").eq("association_id",CA.id).eq("membre_id",membreId).maybeSingle().then(function(rf){
-      var ancSolde=rf.data?+rf.data.solde:0;
-      sb.from("fonds_adhesion").update({solde:+(ancSolde+montant).toFixed(2)}).eq("association_id",CA.id).eq("membre_id",membreId).then(function(){
-        FC[membreId]=(FC[membreId]||0)+montant;
-        // Enregistrer l'acompte dans la table acomptes_projets
-        sb.from("acomptes_projets").insert({
-          association_id:CA.id,
-          projet_participant_id:ppId,
-          membre_id:membreId,
-          projet_id:projetId,
-          montant:montant,
-          date_acompte:td()
-        }).then(function(){
-          rProjRemb();
-          refreshCache(true);
-        }).catch(function(){
-          // Si la table n'existe pas encore, on continue quand même
-          rProjRemb();
-          refreshCache(true);
-        });
-      });
+    if(!caisseId){toastOk("Versement enregistré.");rProjRemb();return;}
+    sb.from("caisse_operations").insert({
+      caisse_id:caisseId,association_id:CA.id,type:"entree",
+      source:"Contribution projet",membre_id:membreId,montant:montant,
+      description:"Versement projet « "+(projNom||"")+" »"+(nvSolde<=0?" (solde soldé)":""),
+      date_operation:td()
+    }).then(function(rc){
+      if(rc.error){toastErr("Versement enregistré mais erreur caisse: "+rc.error.message);}
+      else toastOk("Versement de "+fmt(montant)+" enregistré dans la caisse « "+(projNom||"")+" ».");
+      rProjRemb();
     });
   });
 }
@@ -8955,7 +8918,6 @@ function initNouveauProjet(){
     return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;cursor:pointer">'+
       '<input type="checkbox" class="proj-cb" value="'+m.id+'" onchange="previewProjet()" style="width:16px;height:16px;accent-color:var(--accent)">'+
       '<span>'+mNm(m.id)+'</span>'+
-      '<span style="font-size:11px;color:var(--text3);margin-left:auto">Fond: '+fmt(FC[m.id]||0)+'</span>'+
       '</label>';
   }).join(""));
   // Remplir réunions
@@ -8970,6 +8932,12 @@ function initNouveauProjet(){
   // Date par défaut
   var dt=document.getElementById("proj-dt");
   if(dt&&!dt.value)dt.value=td();
+  // Délai de paiement par défaut : +3 mois
+  var delai=document.getElementById("proj-delai");
+  if(delai&&!delai.value){
+    var d=new Date((dt&&dt.value)||td());d.setMonth(d.getMonth()+3);
+    delai.value=d.toISOString().slice(0,10);
+  }
 }
 
 // Preview aperçu projet
@@ -8982,13 +8950,14 @@ function previewProjet(){
   if(!prev)return;
   if(!mt||!nb){prev.innerHTML="";return;}
   var qp=+(mt/nb).toFixed(2);
-  var dur=CA&&CA.duree_remboursement?CA.duree_remboursement:3;
   prev.innerHTML='<div class="alert alert-info">'+
-    '<strong>Aperçu :</strong> '+nb+' participant(s) · Quote-part : <strong>'+fmt(qp)+' '+sym+'</strong> · Délai remboursement : '+dur+' mois'+
+    '<strong>Aperçu :</strong> '+nb+' participant(s) · Quote-part : <strong>'+fmt(qp)+' '+sym+'</strong> · Une caisse « '+escH((document.getElementById("proj-nom")||{}).value||"...")+' » sera créée pour recevoir les versements'+
     '</div>';
 }
 
-// Créer un projet
+// Créer un projet — crée aussi une caisse dédiée du même nom, alimentée par
+// les versements réels des membres (acompte ou solde total), utilisée pour
+// les dépenses du projet, et supprimée à la clôture.
 function addProjetP(){
   if(!CA)return;
   var nom=(document.getElementById("proj-nom")||{}).value||"";
@@ -8996,17 +8965,19 @@ function addProjetP(){
   var dt=(document.getElementById("proj-dt")||{}).value||td();
   var desc=(document.getElementById("proj-desc")||{}).value||"";
   var reunId=(document.getElementById("proj-reun")||{}).value||null;
+  var delaiEl=document.getElementById("proj-delai");
+  var echStr=(delaiEl&&delaiEl.value)||"";
   var cbs=document.querySelectorAll(".proj-cb:checked");
   var memIds=Array.from(cbs).map(function(cb){return cb.value;});
   if(!nom){alert("Saisissez un nom de projet.");return;}
   if(!mt||mt<=0){alert("Saisissez un montant valide.");return;}
   if(!memIds.length){alert("Sélectionnez au moins un participant.");return;}
+  if(!echStr){alert("Saisissez le délai de paiement.");return;}
   var qp=+(mt/memIds.length).toFixed(2);
-  var dur=CA&&CA.duree_remboursement?+CA.duree_remboursement:3;
-  var ech=new Date(dt);ech.setMonth(ech.getMonth()+dur);
-  var echStr=ech.toISOString().slice(0,10);
   var sym=(typeof getDevSymbol==="function")?getDevSymbol():"€";
-  if(!confirm("Créer le projet \""+nom+"\" ?\n"+memIds.length+" participant(s) · "+fmt(qp)+" "+sym+" chacun · Échéance : "+fdD(echStr))){return;}
+  if(!confirm("Créer le projet \""+nom+"\" ?\n"+memIds.length+" participant(s) · "+fmt(qp)+" "+sym+" chacun · Délai de paiement : "+fdD(echStr)+"\n\nUne caisse \""+nom+"\" sera créée automatiquement pour recevoir les versements.")){return;}
+  var btn=document.querySelector('[onclick="addProjetP()"]');
+  if(btn){btn.disabled=true;btn.textContent="Création…";}
   sb.from("projets").insert({
     association_id:CA.id,
     nom:nom,
@@ -9015,57 +8986,152 @@ function addProjetP(){
     description:desc||null,
     reunion_id:reunId||null,
     nb_participants:memIds.length,
-    quote_part:qp
+    quote_part:qp,
+    date_limite:echStr,
+    statut:"ouvert"
   }).select().single().then(function(r){
-    if(r.error){toastErr("Erreur: "+r.error.message);return;}
+    if(r.error){if(btn){btn.disabled=false;btn.textContent="Créer le projet";}toastErr("Erreur: "+r.error.message);return;}
     var projId=r.data.id;
-    // Créer les participants + débiter fond adhésion
-    var inserts=memIds.map(function(mid){
-      return {
-        association_id:CA.id,
-        projet_id:projId,
-        membre_id:mid,
-        quote_part:qp,
-        solde_restant:qp,
-        date_echeance:echStr,
-        mode:"adhesion"
-      };
-    });
-    sb.from("projets_participants").insert(inserts).then(function(ri){
-      if(ri.error){alert("Erreur participants: "+ri.error.message);return;}
-      // Débiter les fonds adhésion
-      var debPromises=memIds.map(function(mid){
-        var ancSolde=FC[mid]||0;
-        var nvSolde=+(ancSolde-qp).toFixed(2);
-        FC[mid]=nvSolde;
-        return sb.from("fonds_adhesion").update({solde:nvSolde}).eq("association_id",CA.id).eq("membre_id",mid);
-      });
-      Promise.all(debPromises).then(function(){
-        refreshCache(true);
-        G("projets-liste");
+    // Créer la caisse dédiée au projet
+    sb.from("caisses_perso").insert({
+      association_id:CA.id,nom:nom,
+      description:"Caisse dédiée au projet « "+nom+" »",
+      couleur:"#1a9e7a",sources_json:JSON.stringify(["Contribution projet"]),
+      projet_id:projId
+    }).select().single().then(function(rc){
+      if(rc.error){if(btn){btn.disabled=false;btn.textContent="Créer le projet";}toastErr("Erreur caisse: "+rc.error.message);return;}
+      var caisseId=rc.data.id;
+      sb.from("projets").update({caisse_id:caisseId}).eq("id",projId).then(function(){
+        var inserts=memIds.map(function(mid){
+          return {
+            association_id:CA.id,
+            projet_id:projId,
+            membre_id:mid,
+            quote_part:qp,
+            solde_restant:qp,
+            date_echeance:echStr,
+            mode:"caisse"
+          };
+        });
+        sb.from("projets_participants").insert(inserts).then(function(ri){
+          if(btn){btn.disabled=false;btn.textContent="Créer le projet";}
+          if(ri.error){alert("Erreur participants: "+ri.error.message);return;}
+          toastOk("Projet \""+nom+"\" créé avec sa caisse dédiée.");
+          G("projets-liste");
+        });
       });
     });
   });
 }
 
-// Supprimer un projet
+// Supprimer un projet (abandon complet — à ne pas confondre avec Clôturer,
+// qui solde proprement la caisse). Bloqué si la caisse contient encore de
+// l'argent, pour éviter de perdre la trace d'un solde non traité.
 function delProjet(projId){
-  if(!confirm("Supprimer ce projet ?\nLes fonds adhésion déjà remboursés ne seront PAS recredités."))return;
-  // Rembourser les soldes restants avant suppression
-  sb.from("projets_participants").select("*").eq("projet_id",projId).eq("association_id",CA.id).then(function(r){
-    var parts=r.data||[];
-    var credits=parts.filter(function(p){return p.solde_restant>0;}).map(function(p){
-      var ancSolde=FC[p.membre_id]||0;
-      FC[p.membre_id]=+(ancSolde+p.solde_restant).toFixed(2);
-      return sb.from("fonds_adhesion").update({solde:FC[p.membre_id]}).eq("association_id",CA.id).eq("membre_id",p.membre_id);
+  sb.from("projets").select("*").eq("id",projId).eq("association_id",CA.id).single().then(function(r){
+    if(!r.data)return;
+    var p=r.data;
+    var checkSolde=p.caisse_id?sb.from("caisse_operations").select("type,montant").eq("caisse_id",p.caisse_id):Promise.resolve({data:[]});
+    checkSolde.then(function(rc){
+      var ops=rc.data||[];
+      var solde=ops.reduce(function(s,o){return s+(o.type==="entree"?+o.montant:-o.montant);},0);
+      if(solde>0.01){
+        alert("Cette caisse contient encore "+fmt(solde)+" "+getSym()+". Utilisez plutôt \"Clôturer\" pour rembourser les membres ou transférer ce solde avant suppression.");
+        return;
+      }
+      if(!confirm("Supprimer définitivement le projet \""+p.nom+"\" et sa caisse ?\nCette action est irréversible."))return;
+      sb.from("projets").delete().eq("id",projId).then(function(){
+        refreshCache(true);
+        rProjets();
+      }).catch(sbErr("delete"));
     });
-    Promise.all(credits).then(function(){
-      sb.from("projets_participants").delete().eq("projet_id",projId).then(function(){
-        sb.from("projets").delete().eq("id",projId).then(function(){
-          refreshCache(true);
-          rProjets();
-        }).catch(sbErr("delete"));
+  });
+}
+
+// Clôturer un projet : si un solde subsiste dans sa caisse, propose de le
+// rembourser aux membres (au prorata de leurs versements) ou de le transférer
+// vers une autre caisse, puis supprime la caisse (qui n'a plus lieu d'être
+// une fois le projet terminé) tout en conservant l'historique du projet.
+function cloturerProjet(projId){
+  sb.from("projets").select("*").eq("id",projId).eq("association_id",CA.id).single().then(function(r){
+    if(!r.data)return;
+    var p=r.data;
+    var sym=getSym();
+    if(p.statut==="cloture"){alert("Ce projet est déjà clôturé.");return;}
+    if(!p.caisse_id){
+      if(!confirm("Clôturer le projet \""+p.nom+"\" ?"))return;
+      sb.from("projets").update({statut:"cloture",date_cloture:td()}).eq("id",projId).then(function(){rProjets();});
+      return;
+    }
+    sb.from("caisse_operations").select("*").eq("caisse_id",p.caisse_id).then(function(rc){
+      var ops=rc.data||[];
+      var totE=ops.filter(function(o){return o.type==="entree";}).reduce(function(s,o){return s+(+o.montant);},0);
+      var totS=ops.filter(function(o){return o.type==="sortie";}).reduce(function(s,o){return s+(+o.montant);},0);
+      var solde=+(totE-totS).toFixed(2);
+
+      function finaliser(details){
+        sb.from("projets").update({statut:"cloture",date_cloture:td(),cloture_details:details}).eq("id",projId).then(function(){
+          sb.from("caisses_perso").delete().eq("id",p.caisse_id).then(function(){
+            toastOk("Projet \""+p.nom+"\" clôturé.");
+            rProjets();
+          });
+        });
+      }
+
+      if(solde<=0.01){
+        if(!confirm("Clôturer le projet \""+p.nom+"\" ?\nSolde de la caisse : "+fmt(solde)+" "+sym+" (rien à répartir).\n\nLa caisse sera supprimée."))return;
+        finaliser("Aucun solde à la clôture.");
+        return;
+      }
+
+      var choix=prompt(
+        "Clôture du projet \""+p.nom+"\"\nSolde restant dans la caisse : "+fmt(solde)+" "+sym+"\n\n"+
+        "Tapez :\n\"rembourser\" pour répartir ce solde entre les membres, au prorata de leurs versements\n\"transfert\" pour le transférer vers une autre caisse",
+        "rembourser"
+      );
+      if(!choix)return;
+      choix=choix.trim().toLowerCase();
+
+      if(choix.indexOf("t")===0){
+        sb.from("caisses_perso").select("id,nom").eq("association_id",CA.id).neq("id",p.caisse_id).then(function(rcx){
+          var autres=rcx.data||[];
+          if(!autres.length){alert("Aucune autre caisse disponible pour le transfert.");return;}
+          var liste=autres.map(function(c,i){return (i+1)+". "+c.nom;}).join("\n");
+          var choixNum=prompt("Vers quelle caisse transférer les "+fmt(solde)+" "+sym+" ?\n\n"+liste,"1");
+          if(!choixNum)return;
+          var idx=parseInt(choixNum,10)-1;
+          var cible=autres[idx];
+          if(!cible){alert("Choix invalide.");return;}
+          sb.from("caisse_operations").insert({
+            caisse_id:cible.id,association_id:CA.id,type:"entree",
+            source:"Transfert clôture projet",membre_id:null,montant:solde,
+            description:"Transfert du solde de clôture du projet « "+p.nom+" »",
+            date_operation:td()
+          }).then(function(ri){
+            if(ri.error){toastErr("Erreur transfert: "+ri.error.message);return;}
+            finaliser("Solde de "+fmt(solde)+" "+sym+" transféré vers la caisse « "+cible.nom+" » le "+fdD(td())+".");
+          });
+        });
+        return;
+      }
+
+      // Remboursement proportionnel aux versements de chaque membre
+      var parMembre={};
+      ops.filter(function(o){return o.type==="entree"&&o.membre_id;}).forEach(function(o){
+        parMembre[o.membre_id]=(parMembre[o.membre_id]||0)+(+o.montant);
       });
+      var membreIds=Object.keys(parMembre);
+      if(!membreIds.length){alert("Aucun versement de membre identifiable pour calculer un remboursement proportionnel. Utilisez le transfert vers une autre caisse.");return;}
+      var totContrib=membreIds.reduce(function(s,mid){return s+parMembre[mid];},0);
+      var reparti=0,details=[];
+      membreIds.forEach(function(mid,i){
+        var part=(i===membreIds.length-1)?+(solde-reparti).toFixed(2):+((parMembre[mid]/totContrib)*solde).toFixed(2);
+        reparti+=part;
+        var mb=MC.find(function(x){return x.id===mid;});
+        details.push((mb?mb.prenom+" "+mb.nom:mid)+" : "+fmt(part)+" "+sym);
+      });
+      if(!confirm("Remboursement proposé (au prorata des versements) :\n\n"+details.join("\n")+"\n\nConfirmer et clôturer le projet ?"))return;
+      finaliser("Solde de "+fmt(solde)+" "+sym+" remboursé aux membres le "+fdD(td())+" : "+details.join(", ")+".");
     });
   });
 }
@@ -9891,7 +9957,7 @@ function payerStripe(type){
       <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('dons-nouveau')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau don</div>
 
       <div class="nav-item ni" onclick="G('projets-liste')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>Projets</div>
-      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('projets-remboursements')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>Remboursements</div>
+      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('projets-remboursements')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>Versements</div>
       <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('projets-nouveau')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau projet</div>
 
       <div class="nav-item ni" onclick="G('tontine')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/><path d="M8 2l4 4 4-4"/></svg>Tontine</div>
@@ -10005,9 +10071,8 @@ function payerStripe(type){
       <div class="stat-grid" id="dash-stats" style="margin-bottom:14px"></div>
       <!-- Caisses personnalisées -->
       <div id="dash-caisses-perso" style="margin-bottom:14px"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px">
+      <div style="margin-top:4px">
         <div class="card"><div class="card-title">Fond adhésion par membre</div><div id="dash-fonds"></div></div>
-        <div class="card"><div class="card-title">Résumé financier</div><div id="dash-resume"></div></div>
       </div>
     </div>
 
@@ -10298,6 +10363,7 @@ function payerStripe(type){
           <div class="form-group"><label>Motif</label><input type="text" id="ret-mo" placeholder="Ex: retard réunion..."></div>
           <div class="form-group"><label>Montant (€)</label><input type="number" id="ret-mt" placeholder="5" min="0"></div>
           <div class="form-group"><label>Date</label><input type="date" id="ret-dt"></div>
+          <div class="form-group"><label>Réunion associée</label><select id="ret-reun"></select></div>
         </div>
         <button onclick="addRetP()" style="margin-top:14px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer">Enregistrer</button>
       </div>
@@ -10320,6 +10386,7 @@ function payerStripe(type){
           <div class="form-group"><label>Motif</label><input type="text" id="am-mo" placeholder="Ex: comportement..."></div>
           <div class="form-group"><label>Montant (€)</label><input type="number" id="am-mt" placeholder="15" min="0"></div>
           <div class="form-group"><label>Date</label><input type="date" id="am-dt"></div>
+          <div class="form-group"><label>Réunion associée</label><select id="am-reun"></select></div>
         </div>
         <button onclick="addAmP()" style="margin-top:14px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer">Enregistrer</button>
       </div>
@@ -10378,7 +10445,7 @@ function payerStripe(type){
 
     <!-- PROJETS - LISTE -->
     <div class="page" id="page-projets-liste">
-      <div class="alert alert-info">🏗 Un projet est soumis lors d'une réunion. Les membres volontaires se partagent le coût à parts égales. Le fond adhésion est débité ; le membre dispose de 3 mois pour rembourser par acomptes.</div>
+      <div class="alert alert-info">🏗 Un projet est soumis lors d'une réunion. Les membres volontaires se partagent le coût à parts égales et versent leur quote-part (acompte ou solde total) dans une caisse dédiée créée automatiquement, avant le délai de paiement fixé. Les dépenses du projet se font via cette caisse. À la clôture, la caisse est supprimée et le solde éventuel est remboursé ou transféré.</div>
       <div class="card">
         <div class="card-title">Projets <button class="btn btn-primary btn-sm" onclick="G('projets-nouveau')">+ Nouveau projet</button></div>
         <div class="table-wrap"><table>
@@ -10392,11 +10459,11 @@ function payerStripe(type){
     <div class="page" id="page-projets-remboursements">
       <div class="card" style="padding:0">
         <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <span style="font-weight:600;font-size:15px">Remboursements Projets</span>
+          <span style="font-weight:600;font-size:15px">Versements Projets</span>
           <select id="proj-remb-filter" onchange="rProjRemb()" style="margin-left:auto;width:200px"><option value="">Tous les projets</option></select>
         </div>
         <div class="table-wrap"><table>
-          <thead><tr><th>Projet</th><th>Membre</th><th>Quote-part</th><th>Payé</th><th>Restant</th><th>Échéance</th><th>Statut</th><th>Acompte</th></tr></thead>
+          <thead><tr><th>Projet</th><th>Membre</th><th>Quote-part</th><th>Payé</th><th>Restant</th><th>Délai</th><th>Statut</th><th>Paiement</th></tr></thead>
           <tbody id="proj-remb-tbody"></tbody>
         </table></div>
       </div>
@@ -10407,9 +10474,10 @@ function payerStripe(type){
       <div class="card">
         <div class="card-title">Nouveau projet</div>
         <div class="form-grid">
-          <div class="form-group"><label>Nom du projet</label><input type="text" id="proj-nom" placeholder="Ex: achat sono, réparation salle..."></div>
+          <div class="form-group"><label>Nom du projet</label><input type="text" id="proj-nom" placeholder="Ex: voyage Douala, achat sono..." oninput="previewProjet()"></div>
           <div class="form-group"><label>Montant total (€)</label><input type="number" id="proj-mt" placeholder="500" min="0" oninput="previewProjet()"></div>
           <div class="form-group"><label>Date</label><input type="date" id="proj-dt"></div>
+          <div class="form-group"><label>Délai de paiement</label><input type="date" id="proj-delai"></div>
           <div class="form-group"><label>Réunion liée (optionnel)</label><select id="proj-reun"><option value="">-- Aucune --</option></select></div>
           <div class="form-group" style="grid-column:1/-1"><label>Description</label><textarea id="proj-desc" placeholder="Détails du projet..." style="height:70px"></textarea></div>
         </div>
@@ -11330,7 +11398,7 @@ var TITLES2 = {
   'dons-liste':'Dons','dons-remboursements':'Dons · Remboursements','dons-nouveau':'Dons · Nouveau',
   'prets-liste':'Prêts','prets-remboursements':'Prêts · Remboursements','prets-nouveau':'Prêts · Nouveau',
   'pret-interet-liste':'Prêts + Intérêts','pret-interet-remboursements':'Prêts + Intérêts · Remboursements','pret-interet-nouveau':'Prêts + Intérêts · Nouveau',
-  'projets-liste':'Projets','projets-remboursements':'Projets · Remboursements','projets-nouveau':'Projets · Nouveau',
+  'projets-liste':'Projets','projets-remboursements':'Projets · Versements','projets-nouveau':'Projets · Nouveau',
   'fond-caisse-journal':'Fond Caisse','fond-caisse-sortie':'Fond Caisse · Nouvelle sortie',
   'caisses-liste':'Mes Caisses','caisses-nouvelle':'Mes Caisses · Nouvelle caisse',
   'caisse-detail':'Caisse · Journal','caisse-entree':'Caisse · Nouvelle entrée','caisse-sortie':'Caisse · Nouvelle sortie',
@@ -11360,12 +11428,12 @@ function addAdhP() {
   });
 }
 function addRetP() {
-  var d = {association_id:CA.id, membre_id:gV('ret-m'), motif:gV('ret-mo')||null, montant:+E('ret-mt').value, date_infraction:E('ret-dt').value||null, statut:'impaye'};
+  var d = {association_id:CA.id, membre_id:gV('ret-m'), motif:gV('ret-mo')||null, montant:+E('ret-mt').value, date_infraction:E('ret-dt').value||null, statut:'impaye', reunion_id:gV('ret-reun')||null};
   if (!d.membre_id || !d.montant) { alert('Membre et montant requis.'); return; }
   sb.from('retards').insert(d).then(function(){ G('retards-liste'); });
 }
 function addAmP() {
-  var d = {association_id:CA.id, membre_id:gV('am-m'), motif:gV('am-mo')||null, montant:+E('am-mt').value, date_infraction:E('am-dt').value||null, statut:'impaye'};
+  var d = {association_id:CA.id, membre_id:gV('am-m'), motif:gV('am-mo')||null, montant:+E('am-mt').value, date_infraction:E('am-dt').value||null, statut:'impaye', reunion_id:gV('am-reun')||null};
   if (!d.membre_id || !d.montant) { alert('Membre et montant requis.'); return; }
   sb.from('amendes').insert(d).then(function(){ G('amendes-liste'); });
 }
@@ -11411,7 +11479,7 @@ function rCaisses(){
         return '<div class="card" style="border-left:4px solid '+col+';margin-bottom:12px;padding:14px 16px">'+
           '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">'+
           '<div style="flex:1">'+
-          '<div style="font-size:16px;font-weight:700;color:var(--text)"><span style="color:'+col+'">●</span> '+c.nom+'</div>'+
+          '<div style="font-size:16px;font-weight:700;color:var(--text)"><span style="color:'+col+'">●</span> '+c.nom+(c.projet_id?' <span class="badge badge-blue" style="font-size:10px;vertical-align:middle">🏗 Projet</span>':'')+'</div>'+
           (c.description?'<div style="font-size:12px;color:var(--text2);margin-top:3px">'+c.description+'</div>':'')+
           '<div style="font-size:11px;color:var(--text3);margin-top:6px">📋 Sources : '+(srcs.length?srcs.join(' · '):'Entrées manuelles')+'</div>'+
           '</div>'+
@@ -11420,11 +11488,20 @@ function rCaisses(){
           '<div style="font-size:11px;color:var(--text3)">+'+fmt(totE)+' / -'+fmt(totS)+'</div>'+
           '<div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">'+
           '<button class="btn btn-primary btn-sm" onclick="openCaisse(\''+c.id+'\')">Voir / Opérations</button>'+
-          '<button class="btn btn-d btn-sm" onclick="delCaisse(\''+c.id+'\')">Suppr.</button>'+
+          (c.projet_id?'':'<button class="btn btn-d btn-sm" onclick="delCaisse(\''+c.id+'\')">Suppr.</button>')+
           '</div></div></div></div>';
       }).join(""));
     });
   });
+}
+
+// Accès direct à une caisse de projet depuis la page Projets, sans dépendre
+// du cache de la page Caisses (pas forcément déjà chargé).
+function voirCaisseProjet(caisseId,nom){
+  CAISSE_ID=caisseId;
+  CAISSE_NOM=nom||"";
+  CAISSE_SOURCES=["Contribution projet"];
+  G("caisse-detail");
 }
 
 function openCaisse(id){
@@ -11475,6 +11552,8 @@ function delCaisseOp(id){
 }
 
 function delCaisse(id){
+  var c=(window._CAISSES_CACHE||[]).find(function(x){return x.id===id;});
+  if(c&&c.projet_id){alert("Cette caisse est liée à un projet. Clôturez le projet depuis la page Projets pour la supprimer proprement (avec remboursement ou transfert du solde restant).");return;}
   if(!confirm("Supprimer cette caisse et toutes ses opérations ? Cette action est irréversible."))return;
   sb.from("caisse_operations").delete().eq("caisse_id",id).then(function(){
     sb.from("caisses_perso").delete().eq("id",id).then(function(){rCaisses();});

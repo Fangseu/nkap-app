@@ -104,6 +104,14 @@ function contenuTemplate(template, data) {
         lignes: ligneCard("Montant", data.montant) + ligneCard("Date réunion", data.date) + ligneCard("Heure", data.heure) + ligneCard("Lieu", data.lieu || "À confirmer"),
         cloture: "Pensez à être présent(e) pour recevoir votre gain !",
       };
+    case "rappel_projet":
+      return {
+        icone: "⏳",
+        titre: "Échéance projet bientôt !",
+        souslitre: `Projet « ${esc(data.projet)} »`,
+        lignes: ligneCard("Reste à payer", data.montant) + ligneCard("Jours restants", data.jours) + ligneCard("Date limite", data.date_limite),
+        cloture: "Merci de régulariser avant la date limite.",
+      };
     case "rappel_declarations":
       return {
         icone: "📥",
