@@ -888,6 +888,7 @@ function fmt(n){return isNaN(+n)?"0,00":new Intl.NumberFormat("fr-FR",{minimumFr
 function addM(ds,n){var d=new Date(ds);d.setMonth(d.getMonth()+n);return d.toISOString().slice(0,10);}
 function ds2(yr){var d=new Date(yr,9,1);while(d.getDay()!==6)d.setDate(d.getDate()+1);d.setDate(d.getDate()+7);return d.toISOString().slice(0,10);}
 function saison(){var t=td(),yr=new Date().getFullYear();return t>=ds2(yr)?yr+1:yr;}
+function saisonDe(dateStr){var yr=new Date(dateStr).getFullYear();return dateStr>=ds2(yr)?yr+1:yr;}
 function debut(){return ds2(saison()-1);}
 function dRemb(){return (CA&&CA.duree_remboursement)||3;}
 function mCol(id){var i=MC.findIndex(function(x){return x.id===id;});return COLS[Math.max(0,i)%COLS.length];}
@@ -1943,6 +1944,7 @@ function rDashDemo(){
 
 function rDash(){
   if(!CA)return;
+  updateDashBanner();
   var sym=(typeof getDevSymbol==="function")?getDevSymbol():"EUR";
   refreshCache().then(function(){
     var aid=CA.id;
@@ -3709,7 +3711,7 @@ function rTontineCotisations(){
       // Table des cotisations
       '<div class="card"><div class="card-title">Cotisations de '+tMoisStr(window._tCotMois)+'</div>'+
       '<div class="table-wrap"><table><thead><tr>'+
-      '<th>Membre</th><th>Parts</th><th>Montant dû</th><th>Mode</th><th>Date</th><th>Statut</th><th>Action</th>'+
+      '<th>Membre</th><th>Parts</th><th>Montant dû</th><th>Date</th><th>Statut</th><th>Action</th>'+
       '</tr></thead><tbody>';
 
     cots.forEach(function(c){
@@ -3719,7 +3721,6 @@ function rTontineCotisations(){
         '<td>'+avEl(c.membre_id)+' <span style="font-size:13px">'+nom+'</span></td>'+
         '<td style="text-align:center">'+c.nb_parts+'</td>'+
         '<td style="font-weight:600">'+c.montant_du+' '+sym+'</td>'+
-        '<td>'+(c.mode_paiement||'—')+'</td>'+
         '<td>'+(c.date_paiement?fdD(c.date_paiement):"—")+'</td>'+
         '<td>'+tCotStatutBadge(c.statut)+'</td>'+
         '<td>'+(c.statut!=="valide"?
@@ -3776,12 +3777,8 @@ function rTontineCotisations(){
 }
 
 function validerCotTontine(cotId, tId){
-  var modes=['especes','virement','mobile_money'];
-  var mode=prompt("Mode de paiement ?\n1. Espèces\n2. Virement\n3. Mobile Money\n(Entrez 1, 2 ou 3)");
-  if(!mode)return;
-  var modeVal=modes[parseEntier(mode,{fallback:1,min:1,max:modes.length})-1]||"especes";
   sb.from("tontine_cotisations").update({
-    statut:"valide",mode_paiement:modeVal,
+    statut:"valide",
     date_paiement:td(),valide_par:CU.id,
     date_validation:new Date().toISOString()
   }).eq("id",cotId).then(function(){rTontineCotisations();});
@@ -4701,22 +4698,9 @@ function rReuns(){
   var infoEl=E("reun-saison-info");if(infoEl)infoEl.textContent="Saison "+sai+" -- Depuis le "+fdD(deb)+" -- Prochain reset: "+fdD(nxt);
   sb.from("reunions").select("*").eq("association_id",CA.id).limit(500).order("date_reunion",{ascending:false}).then(function(r){
     var reuns=r.data||[];
-    sH("reun-tbody",reuns.length?reuns.map(function(ru){
-      var aH=(ru.presents||[]).filter(function(id){return !(ru.retards_list||[]).find(function(x){return x.membreId===id&&x.montant>0;});});
-      var enR=(ru.retards_list||[]).filter(function(x){return x.montant>0;});
-      return "<tr><td>"+fdD(ru.date_reunion)+"</td><td>"+ru.titre+"</td>"+
-        "<td><div style=\"display:flex;flex-wrap:wrap;gap:3px\">"+aH.map(function(id){return avEl(id);}).join("")+(aH.length===0?"<span>--</span>":"")+"</div></td>"+
-        "<td><div style=\"display:flex;flex-wrap:wrap;gap:3px\">"+enR.map(function(x){return '<div style="position:relative">'+avEl(x.membreId)+'<span style="position:absolute;top:-3px;right:-3px;background:var(--accent);color:#000;font-size:8px;border-radius:8px;padding:0 2px;font-weight:700">'+fmt(x.montant)+"</span></div>";}).join("")+(enR.length===0?"<span>--</span>":"")+"</div></td>"+
-        "<td><div style=\"display:flex;flex-wrap:wrap;gap:3px\">"+(ru.absents||[]).map(function(id){return '<div style="opacity:.4">'+avEl(id)+"</div>";}).join("")+((ru.absents||[]).length===0?'<span class="badge bg">Tous</span>':"")+"</div></td>"+
-        '<td style="display:flex;gap:4px;flex-wrap:wrap">'+
-        '<button class="btn btn-s btn-sm" onclick="detReun(\''+ru.id+'\')">Détail</button>'+
-        '<button class="btn btn-s btn-sm" style="background:var(--accent-light);border-color:rgba(26,158,122,.3);color:var(--accent)" onclick="genererPV(\''+ru.id+'\')">📄 PV</button>'+
-        (ru.pv_valide
-          ? '<button class="btn btn-s btn-sm" style="background:rgba(26,158,122,.15);border:1px solid var(--green);color:var(--green)" onclick="devaliderPV(\''+ru.id+'\')" title="PV validé — cliquer pour retirer">✓ Validé</button>'
-          : '<button class="btn btn-s btn-sm" style="background:rgba(245,200,66,.12);border:1px solid rgba(245,200,66,.4);color:#a07a00" onclick="validerPV(\''+ru.id+'\')" title="Valider ce PV pour les membres">Valider PV</button>'
-        )+
-        '</td></tr>';
-    }).join(''):'<tr><td colspan="6"><div class="empty">Aucune reunion</div></td></tr>');
+    window._reunionsCache=reuns;
+    remplirFiltreSaisonReun(reuns,sai);
+    rReunsTable();
     var reunSai=reuns.filter(function(r){return r.date_reunion>=deb&&r.date_reunion<=td();});
     var tot=reunSai.length,nbS=(CA&&CA.nb_absences_avant_amende)||3;
     sH("reun-suivi-tbody",MC.filter(function(m){return m.statut==="actif";}).map(function(m){
@@ -4732,6 +4716,52 @@ function rReuns(){
         "<td>"+(nbA>=nbS?'<span class="badge br">Amende active</span>':"<span style=\"color:var(--text3)\">--</span>")+"</td></tr>";
     }).join('')||'<tr><td colspan="6"><div class="empty">Aucun membre actif</div></td></tr>');
   });
+}
+
+// Remplit le select "Saison" du filtre à partir des saisons réellement
+// présentes dans les réunions chargées (évite de lister des saisons vides).
+function remplirFiltreSaisonReun(reuns,saisonCourante){
+  var sel=E("reun-filtre-saison");
+  if(!sel)return;
+  var saisons=Array.from(new Set(reuns.map(function(r){return saisonDe(r.date_reunion);}))).sort(function(a,b){return b-a;});
+  if(saisons.indexOf(saisonCourante)===-1)saisons.unshift(saisonCourante);
+  var cur=sel.value||String(saisonCourante);
+  sel.innerHTML='<option value="toutes">Toutes les saisons</option>'+
+    saisons.map(function(s){return '<option value="'+s+'">Saison '+(s-1)+'-'+s+'</option>';}).join('');
+  sel.value=saisons.map(String).indexOf(cur)!==-1?cur:String(saisonCourante);
+}
+
+// Ré-affiche le tableau des réunions à partir du cache, filtré par saison
+// et par recherche texte (titre / lieu) — évite de redéfiler dans 12+ réunions.
+function rReunsTable(){
+  var reuns=window._reunionsCache||[];
+  var selSaison=E("reun-filtre-saison"),selRech=E("reun-filtre-recherche");
+  var saisonVal=selSaison?selSaison.value:"toutes";
+  var rech=(selRech?selRech.value:"").trim().toLowerCase();
+  if(saisonVal&&saisonVal!=="toutes"){
+    reuns=reuns.filter(function(r){return String(saisonDe(r.date_reunion))===saisonVal;});
+  }
+  if(rech){
+    reuns=reuns.filter(function(r){return (r.titre||"").toLowerCase().indexOf(rech)!==-1||(r.lieu||"").toLowerCase().indexOf(rech)!==-1;});
+  }
+  var cptEl=E("reun-filtre-count");
+  if(cptEl)cptEl.textContent=reuns.length+" réunion(s)";
+  sH("reun-tbody",reuns.length?reuns.map(function(ru){
+    var aH=(ru.presents||[]).filter(function(id){return !(ru.retards_list||[]).find(function(x){return x.membreId===id&&x.montant>0;});});
+    var enR=(ru.retards_list||[]).filter(function(x){return x.montant>0;});
+    return "<tr><td>"+fdD(ru.date_reunion)+"</td><td>"+ru.titre+"</td>"+
+      "<td><div style=\"display:flex;flex-wrap:wrap;gap:3px\">"+aH.map(function(id){return avEl(id);}).join("")+(aH.length===0?"<span>--</span>":"")+"</div></td>"+
+      "<td><div style=\"display:flex;flex-wrap:wrap;gap:3px\">"+enR.map(function(x){return '<div style="position:relative">'+avEl(x.membreId)+'<span style="position:absolute;top:-3px;right:-3px;background:var(--accent);color:#000;font-size:8px;border-radius:8px;padding:0 2px;font-weight:700">'+fmt(x.montant)+"</span></div>";}).join("")+(enR.length===0?"<span>--</span>":"")+"</div></td>"+
+      "<td><div style=\"display:flex;flex-wrap:wrap;gap:3px\">"+(ru.absents||[]).map(function(id){return '<div style="opacity:.4">'+avEl(id)+"</div>";}).join("")+((ru.absents||[]).length===0?'<span class="badge bg">Tous</span>':"")+"</div></td>"+
+      '<td style="display:flex;gap:4px;flex-wrap:wrap">'+
+      '<button class="btn btn-s btn-sm" onclick="detReun(\''+ru.id+'\')">Détail</button>'+
+      '<button class="btn btn-s btn-sm" style="background:var(--accent-light);border-color:rgba(26,158,122,.3);color:var(--accent)" onclick="genererPV(\''+ru.id+'\')">📄 PV</button>'+
+      (ru.pv_valide
+        ? '<button class="btn btn-s btn-sm" style="background:rgba(26,158,122,.15);border:1px solid var(--green);color:var(--green)" onclick="devaliderPV(\''+ru.id+'\')" title="PV validé — cliquer pour retirer">✓ Validé</button>'
+        : '<button class="btn btn-s btn-sm" style="background:rgba(245,200,66,.12);border:1px solid rgba(245,200,66,.4);color:#a07a00" onclick="validerPV(\''+ru.id+'\')" title="Valider ce PV pour les membres">Valider PV</button>'
+      )+
+      '</td></tr>';
+  }).join(''):'<tr><td colspan="6"><div class="empty">Aucune reunion</div></td></tr>');
 }
 function genererPVMembre(reunId){
   // Vérifie que le PV est bien validé avant de générer
@@ -7089,20 +7119,24 @@ function appliquerBureau(b){
 // PERMISSIONS PAR RÔLE DE BUREAU
 // ================================================================
 
+// Répartition : le secrétaire crée (réunions, votes, dons/amendes/retards,
+// projets, cycles de tontine) ; le trésorier valide/encaisse (cotisations,
+// adhésion, paiements de retards/amendes/dons, cotisations tontine) et gère
+// l'ensemble des caisses (Fond Caisse, Fond Cotisation, Caisses perso.).
 var PERMS_BUREAU = {
   // président = null → accès total, pas de filtre
   tresorier: [
     'dashboard','membres',
     'cotisations-liste','cotisations-nouvelle',
     'adhesion-fonds','adhesion-paiements','adhesion-nouveau',
-    'retards-liste','retards-nouveau',
-    'amendes-liste','amendes-nouvelle',
-    'dons-liste','dons-remboursements','dons-nouveau',
-    'projets-liste','projets-remboursements','projets-nouveau',
-    'tontine','tontine-calendrier','tontine-cotisations',
+    'retards-liste',
+    'amendes-liste',
+    'dons-liste','dons-remboursements',
+    'projets-liste','projets-remboursements',
+    'tontine-cotisations',
     'fond-caisse-journal','fond-caisse-sortie',
     'fond-cotisation-journal','fond-cotisation-virement',
-    'caisses-liste','caisses-nouvelle',
+    'caisses-liste','caisses-nouvelle','caisse-detail','caisse-entree','caisse-sortie',
     'vente-fond','vente-depot','vente-retrait','vente-prets','vente-pret-new','vente-bilan',
     'votes-liste','votes-nouvelle',
     'comptabilite','alertes','mon-compte','documents','assistant-ia'
@@ -7110,10 +7144,12 @@ var PERMS_BUREAU = {
   secretaire: [
     'dashboard','membres',
     'reunions-liste','reunions-suivi','reunions-nouvelle',
-    'retards-liste','retards-nouveau',
-    'amendes-liste','amendes-nouvelle',
-    'adhesion-fonds','adhesion-paiements',
     'votes-liste','votes-nouvelle',
+    'retards-nouveau',
+    'amendes-nouvelle',
+    'dons-nouveau',
+    'projets-nouveau',
+    'tontine','tontine-calendrier',
     'alertes','mon-compte','documents','assistant-ia'
   ]
 };
@@ -8799,7 +8835,7 @@ function rProjets(){
         var cloture=p.statut==="cloture";
         var statut=cloture?"<span class='badge badge-gray'>Clôturé</span>":(tous_ok?"<span class='badge badge-green'>Financé</span>":"<span class='badge badge-yellow'>En cours</span>");
         var actions=cloture?"<span style='color:var(--text3);font-size:12px'>--</span>":
-          (p.caisse_id?"<button class='btn btn-secondary btn-sm' onclick=\"voirCaisseProjet('"+p.caisse_id+"','"+escH(p.nom).replace(/'/g,"\\'")+"')\">💰 Caisse</button> ":"")+
+          (p.caisse_id&&hasPerm('caisse-detail')?"<button class='btn btn-secondary btn-sm' onclick=\"voirCaisseProjet('"+p.caisse_id+"','"+escH(p.nom).replace(/'/g,"\\'")+"')\">💰 Caisse</button> ":"")+
           "<button class='btn btn-primary btn-sm' onclick='cloturerProjet(\""+p.id+"\")'>Clôturer</button> "+
           "<button class='btn btn-d btn-sm' onclick='delProjet(\""+p.id+"\")'>Suppr.</button>";
         return "<tr>"+
@@ -9017,7 +9053,7 @@ function addProjetP(){
           if(btn){btn.disabled=false;btn.textContent="Créer le projet";}
           if(ri.error){alert("Erreur participants: "+ri.error.message);return;}
           toastOk("Projet \""+nom+"\" créé avec sa caisse dédiée.");
-          G("projets-liste");
+          G(hasPerm("projets-liste")?"projets-liste":"dashboard");
         });
       });
     });
@@ -9927,15 +9963,29 @@ function payerStripe(type){
       <div class="nav-label">Principal</div>
       <div class="nav-item ni active" onclick="G('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Tableau de bord</div>
       <div class="nav-item ni" onclick="G('membres')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Membres</div>
-      <div class="nav-item ni" onclick="G('reunions-liste')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Réunions</div>
-      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('reunions-suivi')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Suivi absences</div>
-      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('reunions-nouvelle')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouvelle réunion</div>
-      <div class="nav-item ni" onclick="G('votes-liste')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Votes</div>
-      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('votes-nouvelle')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau vote</div>
     </div>
 
     <div class="nav-section">
-      <div class="nav-label">Finances</div>
+      <div class="nav-label">📋 Secrétariat</div>
+      <div class="nav-item ni" onclick="G('reunions-liste')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Réunions</div>
+      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('reunions-suivi')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Suivi absences</div>
+      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('reunions-nouvelle')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouvelle réunion</div>
+
+      <div class="nav-item ni" onclick="G('votes-liste')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Votes</div>
+      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('votes-nouvelle')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau vote</div>
+
+      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('retards-nouveau')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau retard</div>
+      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('amendes-nouvelle')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouvelle amende</div>
+      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('dons-nouveau')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau don</div>
+
+      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('projets-nouveau')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau projet</div>
+
+      <div class="nav-item ni" onclick="G('tontine')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/><path d="M8 2l4 4 4-4"/></svg>Tontine</div>
+      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('tontine-calendrier')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendrier</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">💰 Trésorerie</div>
       <div class="nav-item ni" onclick="G('cotisations-liste')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Cotisations</div>
       <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('cotisations-nouvelle')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouvelle cotisation</div>
 
@@ -9944,25 +9994,15 @@ function payerStripe(type){
       <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('adhesion-nouveau')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau paiement</div>
 
       <div class="nav-item ni" onclick="G('retards-liste')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Retards</div>
-      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('retards-nouveau')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau retard</div>
-
       <div class="nav-item ni" onclick="G('amendes-liste')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>Amendes</div>
-      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('amendes-nouvelle')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouvelle amende</div>
-    </div>
 
-    <div class="nav-section">
-      <div class="nav-label">Fonds</div>
       <div class="nav-item ni" onclick="G('dons-liste')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Dons</div>
       <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('dons-remboursements')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>Remboursements</div>
-      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('dons-nouveau')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau don</div>
 
       <div class="nav-item ni" onclick="G('projets-liste')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>Projets</div>
       <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('projets-remboursements')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>Versements</div>
-      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('projets-nouveau')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau projet</div>
 
-      <div class="nav-item ni" onclick="G('tontine')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/><path d="M8 2l4 4 4-4"/></svg>Tontine</div>
-      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('tontine-calendrier')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendrier</div>
-      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('tontine-cotisations')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Cotisations</div>
+      <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('tontine-cotisations')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Tontine · Cotisations</div>
 
       <div class="nav-item ni" onclick="G('fond-caisse-journal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4"/><path d="M2 13v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6"/><circle cx="12" cy="10" r="2"/></svg>Fond Caisse</div>
       <div class="nav-item ni" style="padding-left:32px;font-size:12px" onclick="G('fond-caisse-sortie')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouvelle sortie</div>
@@ -10206,6 +10246,11 @@ function payerStripe(type){
     <div class="page" id="page-reunions-liste">
       <div class="alert alert-info">📅 Heure fixée : <strong id="reun-heure-label">17h30</strong> · Tranche 1 → <strong id="reun-t1-label">2,50 €</strong> · Tranche 2 → <strong id="reun-t2-label">5,00 €</strong> · Amende absence dès la <strong id="reun-nb-label">3e</strong> absence : <strong id="reun-am-label">15 €</strong></div>
       <div id="reun-saison-info" style="margin-bottom:14px;font-size:13px;color:var(--text2)"></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+        <select id="reun-filtre-saison" onchange="rReunsTable()" style="width:auto"></select>
+        <input type="text" id="reun-filtre-recherche" oninput="rReunsTable()" placeholder="🔍 Rechercher un titre ou un lieu..." style="flex:1;min-width:180px">
+        <span id="reun-filtre-count" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
+      </div>
       <div class="card" style="padding:0"><div class="table-wrap"><table>
         <thead><tr><th>Date</th><th>Titre</th><th>✅ À l'heure</th><th>⏰ Retards</th><th>❌ Absents</th><th>Actions</th></tr></thead>
         <tbody id="reun-tbody"></tbody>
