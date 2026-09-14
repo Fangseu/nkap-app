@@ -112,6 +112,14 @@ function contenuTemplate(template, data) {
         lignes: ligneCard("Reste à payer", data.montant) + ligneCard("Jours restants", data.jours) + ligneCard("Date limite", data.date_limite),
         cloture: "Merci de régulariser avant la date limite.",
       };
+    case "bilan_saison":
+      return {
+        icone: "📊",
+        titre: "Le bureau fait son bilan",
+        souslitre: "Saison " + esc(data.saison) + " — merci pour votre engagement",
+        lignes: ligneCard("Réunions tenues", data.reunions) + ligneCard("Mouvement caisse principale", data.caisse),
+        cloture: "Le bureau vous présente le détail complet (projets, dons, caisses, Vente Argent) dans l'onglet « Bilans » de votre espace membre.",
+      };
     case "rappel_declarations":
       return {
         icone: "📥",
