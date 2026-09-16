@@ -1951,6 +1951,10 @@ function rDash(){
     var actifs=MC.filter(function(m){return m.statut==="actif";}).length;
     var totalFonds=Object.values(FC).reduce(function(a,b){return a+b;},0);
     var plan=CA.plan||"gratuit";
+    var dNow=new Date();
+    var curYM=dNow.getFullYear()+"-"+(dNow.getMonth()<9?"0":"")+(dNow.getMonth()+1);
+    var dNext=new Date(dNow.getFullYear(),dNow.getMonth()+1,1);
+    var nextYM=dNext.getFullYear()+"-"+(dNext.getMonth()<9?"0":"")+(dNext.getMonth()+1);
     Promise.all([
       sb.from("cotisations").select("montant,statut,date_paiement").eq("association_id",aid),
       sb.from("retards").select("montant,membre_id").eq("association_id",aid).eq("statut","impaye"),
@@ -1967,6 +1971,8 @@ function rDash(){
       sb.from("declarations_paiement").select("*").eq("association_id",aid).eq("statut","en_attente").order("created_at",{ascending:false}).then(function(r){return {data:(r&&r.data)||[],error:r&&r.error};}),
       sb.from("caisses_perso").select("id,nom,description,couleur,sources_json").eq("association_id",aid).order("created_at"),
       sb.from("caisse_operations").select("caisse_id,type,montant").eq("association_id",aid),
+      sb.from("tontines").select("id,nom,statut").eq("association_id",aid),
+      sb.from("tontine_tirage").select("membre_id,mois_calendrier,montant_gain,tontine_id").eq("association_id",aid).in("mois_calendrier",[curYM,nextYM]),
     ]).then(function(rs){
       var cots=rs[0].data||[],rets=rs[1].data||[],ams=rs[2].data||[];
       var rembs=rs[3].data||[],projParts=rs[4].data||[];
@@ -1978,6 +1984,8 @@ function rDash(){
       var declarations=(rs[12]&&rs[12].data)||[];
       var caissesList=rs[13].data||[];
       var caisseOps=rs[14].data||[];
+      var tontinesAll=rs[15].data||[];
+      var tirageCurNext=rs[16].data||[];
       window._CAISSES_CACHE=caissesList;
       var soldeCaisse=(retsPayes.reduce(function(s,r){return s+(+r.montant);},0)+amsPayes.reduce(function(s,a){return s+(+a.montant);},0))-sorties.reduce(function(s,so){return s+(+so.montant);},0);
       var totC=cots.filter(function(c){return c.statut==="paye";}).reduce(function(s,c){return s+(+c.montant);},0);
@@ -2141,6 +2149,29 @@ function rDash(){
           '</div><div class="progress-bar-container"><div class="progress-bar" style="width:'+pct+'%"></div></div></div></div>';
       }).join("");
       sH("dash-fonds",fh||'<div class="empty">Aucun membre actif</div>');
+
+      // Bénéficiaires tontine — ce mois / mois prochain (cycles avec tirage fixé)
+      var tontineValidIds={};
+      tontinesAll.forEach(function(t){if(t.statut==="en_negociation"||t.statut==="verrouille"||t.statut==="en_cours")tontineValidIds[t.id]=true;});
+      var gagnantsCur=[],gagnantsNext=[];
+      tirageCurNext.forEach(function(s){
+        if(!tontineValidIds[s.tontine_id])return;
+        var mb=MC.find(function(x){return x.id===s.membre_id;});
+        var item={nom:mb?mb.prenom+" "+mb.nom:"?",membre_id:s.membre_id,montant:s.montant_gain};
+        if(s.mois_calendrier===curYM)gagnantsCur.push(item);
+        else if(s.mois_calendrier===nextYM)gagnantsNext.push(item);
+      });
+      function tBenefListH(list){
+        if(!list.length)return '<div class="empty" style="padding:8px 0">Aucun</div>';
+        return list.map(function(g){
+          return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+avEl(g.membre_id)+
+            '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+g.nom+'</div></div>'+
+            '<span style="font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0">'+fmt(g.montant)+' '+sym+'</span></div>';
+        }).join("");
+      }
+      var tb='<div style="margin-bottom:14px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">🎯 Ce mois-ci</div>'+tBenefListH(gagnantsCur)+'</div>'+
+        '<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">📆 Mois prochain</div>'+tBenefListH(gagnantsNext)+'</div>';
+      sH("dash-tontine-benef",tontinesAll.length?tb:'<div class="empty">Aucune tontine active</div>');
 
       // Caisses personnalisées — cartes KPI
       if(caissesList.length){
@@ -10433,8 +10464,9 @@ function payerStripe(type){
       <div class="stat-grid" id="dash-stats" style="margin-bottom:14px"></div>
       <!-- Caisses personnalisées -->
       <div id="dash-caisses-perso" style="margin-bottom:14px"></div>
-      <div style="margin-top:4px">
+      <div style="margin-top:4px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
         <div class="card"><div class="card-title">Fond adhésion par membre</div><div id="dash-fonds"></div></div>
+        <div class="card"><div class="card-title">🎯 Tontine — bénéficiaires</div><div id="dash-tontine-benef"></div></div>
       </div>
     </div>
 
