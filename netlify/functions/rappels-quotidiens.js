@@ -78,7 +78,7 @@ async function envoyerEmail(to, subject, template, data) {
   try {
     const r = await fetch(`${process.env.URL}/.netlify/functions/send-email`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-Internal-Key": SB_KEY },
       body: JSON.stringify({ to, subject, template, data }),
     });
     if (!r.ok) console.warn("[rappels] email KO", to, template, r.status);

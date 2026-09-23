@@ -14,6 +14,19 @@
 //                                   "Nkap. <fangseu@gmail.com>" (déjà validé dans Brevo).
 //   APP_URL         (optionnel)   — ex: "https://votredomaine.com" — si définie,
 //                                   ajoute un bouton "Ouvrir mon espace" dans l'email.
+//   SUPABASE_URL, SUPABASE_ANON_KEY (obligatoires) — déjà définies sur ce site
+//                                   pour le build (build.js) ; réutilisées ici pour
+//                                   vérifier que l'appelant a une session valide.
+//
+// ⚠️ Cette fonction était auparavant un relais ouvert : aucune vérification
+// d'authentification, donc n'importe qui connaissant l'URL pouvait faire
+// envoyer un email (spam/phishing) via le compte Brevo de l'app, vers
+// n'importe quelle adresse. Elle exige maintenant soit :
+//   - un token de session Supabase valide (Authorization: Bearer <access_token>),
+//     envoyé automatiquement par envoyerEmail() côté client ;
+//   - soit un appel interne de confiance (header X-Internal-Key = la clé
+//     service_role), utilisé par rappels-quotidiens.js qui tourne sans
+//     session utilisateur.
 // ================================================================
 
 const VERT_H1 = "#2d7a52";
@@ -246,11 +259,38 @@ function buildHtml(template, data) {
   </body></html>`;
 }
 
+async function getAuthenticatedUser(authHeader) {
+  const sbUrl = process.env.SUPABASE_URL;
+  const sbAnonKey = process.env.SUPABASE_ANON_KEY;
+  if (!authHeader || !authHeader.startsWith("Bearer ") || !sbUrl || !sbAnonKey) return null;
+  const token = authHeader.slice(7).trim();
+  if (!token) return null;
+  try {
+    const r = await fetch(`${sbUrl}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: sbAnonKey },
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+// Appel interne de confiance (ex. rappels-quotidiens.js, un cron sans session
+// utilisateur) : authentifié par la clé service_role, jamais exposée au
+// navigateur, transmise dans un header dédié plutôt que dans Authorization
+// (pour ne pas la confondre avec un token de session utilisateur classique).
+function isInternalCall(event) {
+  const key = event.headers["x-internal-key"];
+  const expected = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return !!key && !!expected && key === expected;
+}
+
 exports.handler = async function (event) {
   const headers = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
 
@@ -259,6 +299,14 @@ exports.handler = async function (event) {
   }
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, headers, body: JSON.stringify({ success: false, error: "Méthode non autorisée" }) };
+  }
+
+  if (!isInternalCall(event)) {
+    const authHeader = event.headers.authorization || event.headers.Authorization;
+    const user = await getAuthenticatedUser(authHeader);
+    if (!user || !user.id) {
+      return { statusCode: 401, headers, body: JSON.stringify({ success: false, error: "Authentification requise" }) };
+    }
   }
 
   const apiKey = process.env.BREVO_API_KEY;
