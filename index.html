@@ -7693,6 +7693,33 @@ function changerAssociation(){
   });
 }
 
+// Créer une nouvelle association pour l'utilisateur déjà connecté (admin ou membre)
+// sans repasser par sb.auth.signUp — évite de dépendre du comportement de Supabase
+// sur un email déjà enregistré (cf. ancien flux via le formulaire "S'inscrire").
+function ouvrirCreerAssociation(){
+  if(!CU)return;
+  var nom=prompt("Nom de la nouvelle association à créer :");
+  if(!nom||!nom.trim())return;
+  nom=nom.trim();
+  var slug=nom.toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,40)+"-"+Date.now().toString(36);
+  sb.from("utilisateurs").select("prenom,nom").eq("auth_user_id",CU.id).limit(1).then(function(pr){
+    var prof=(pr.data&&pr.data[0])||{};
+    sb.from("associations").insert({nom:nom,slug:slug}).select().single().then(function(ra){
+      if(ra.error){toastErr("Erreur: "+ra.error.message);return;}
+      sb.from("utilisateurs").insert({
+        association_id:ra.data.id,auth_user_id:CU.id,email:CU.email,
+        prenom:prof.prenom||"",nom:prof.nom||"",role:"admin"
+      }).select().single().then(function(ru){
+        if(ru.error){toastErr("Erreur: "+ru.error.message);return;}
+        toastOk('Association "'+nom+'" créée !');
+        ru.data.associations=ra.data;
+        var p=E("asso-picker");if(p)p.remove();
+        routerUtilisateur(ru.data);
+      });
+    });
+  });
+}
+
 function loadConf(){
   if(!CA)return;
   var c=CA;
@@ -10417,6 +10444,7 @@ function payerStripe(type){
       </div>
       <!-- Changer d'association -->
       <button id="btn-switch-asso" onclick="changerAssociation()" style="display:none;width:100%;background:none;border:1px solid rgba(26,158,122,.25);color:var(--accent);border-radius:6px;padding:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:6px" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background='none'">⇄ Changer d'association</button>
+      <button onclick="ouvrirCreerAssociation()" style="width:100%;background:none;border:1px solid rgba(26,158,122,.25);color:var(--accent);border-radius:6px;padding:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:6px" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background='none'">➕ Nouvelle association</button>
       <button onclick="doLogout()" style="width:100%;background:none;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:7px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(244,100,95,.4)'" onmouseout="this.style.color='var(--text2)';this.style.borderColor='var(--border)'">Déconnexion</button>
     </div>
   </nav>
@@ -11770,6 +11798,7 @@ function payerStripe(type){
         <div style="font-size:11px;color:var(--text3)">Membre</div>
       </div>
       <button id="btn-retour-admin" onclick="retourAdmin()" style="display:none;background:var(--accent);border:none;color:#fff;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600">← Espace admin</button>
+      <button onclick="ouvrirCreerAssociation()" style="background:none;border:1px solid rgba(26,158,122,.3);color:var(--accent);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600">➕ Nouvelle association</button>
       <button onclick="doLogoutMembre()" style="background:none;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(244,100,95,.4)'" onmouseout="this.style.color='var(--text2)';this.style.borderColor='var(--border)'">Déconnexion</button>
     </div>
   </div>
