@@ -45,4 +45,15 @@ for (const f of fs.readdirSync(path.join(SRC, "icons"))) {
   fs.copyFileSync(path.join(SRC, "icons", f), path.join(DIST, "icons", f));
 }
 
+// Visuels promo (captures/cartes pour réseaux sociaux) : dossier optionnel,
+// copié tel quel s'il existe, pour qu'il survive aux déploiements normaux
+// (qui relancent ce script et videraient sinon dist/ à chaque fois).
+const promoSrc = path.join(SRC, "promo");
+if (fs.existsSync(promoSrc)) {
+  fs.mkdirSync(path.join(DIST, "promo"), { recursive: true });
+  for (const f of fs.readdirSync(promoSrc)) {
+    fs.copyFileSync(path.join(promoSrc, f), path.join(DIST, "promo", f));
+  }
+}
+
 console.log("[build] OK —", DIST);

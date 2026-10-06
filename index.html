@@ -2453,6 +2453,7 @@ function rRets(){
   if(!CA)return;
   sb.from("retards").select("*").eq("association_id",CA.id).limit(500).order("date_infraction",{ascending:false}).then(function(r){
     var data=r.data||[];
+    var f=gV("ret-filter");if(f)data=data.filter(function(r2){return r2.statut===f;});
     sH("ret-tbody",data.length?data.map(function(r2){
       return "<tr><td>"+mChip(r2.membre_id)+"</td><td>"+(r2.motif||"--")+"</td><td>"+fmt(r2.montant)+' '+getSym()+'</td><td>'+fdD(r2.date_infraction)+"</td>"+
         '<td><span class="badge '+(r2.statut==="paye"?"badge-green":"badge-red")+'">'+(r2.statut==="paye"?"Paye":"Impaye")+"</span></td>"+
@@ -2477,6 +2478,7 @@ function rAms(){
   if(!CA)return;
   sb.from("amendes").select("*").eq("association_id",CA.id).limit(500).order("date_infraction",{ascending:false}).then(function(r){
     var data=r.data||[];
+    var f=gV("am-filter");if(f)data=data.filter(function(a){return a.statut===f;});
     sH("am-tbody",data.length?data.map(function(a){
       return "<tr><td>"+mChip(a.membre_id)+"</td><td>"+(a.motif||"--")+"</td><td>"+fmt(a.montant)+' '+getSym()+'</td><td>'+fdD(a.date_infraction)+"</td>"+
         '<td><span class="badge '+(a.statut==="paye"?"badge-green":"badge-red")+'">'+(a.statut==="paye"?"Paye":"Impaye")+"</span></td>"+
@@ -9261,6 +9263,16 @@ function rProjRemb(){
     var filtreId=sel?sel.value:"";
     var filtParts=filtreId?parts.filter(function(x){return x.projet_id===filtreId;}):parts;
 
+    var filtreStatut=gV("proj-remb-statut-filter");
+    if(filtreStatut){
+      var today0=new Date(td());
+      filtParts=filtParts.filter(function(x){
+        if(x.solde_restant<=0)return filtreStatut==="solde";
+        var enRetard0=today0>new Date(x.date_echeance);
+        return filtreStatut==="retard"?enRetard0:(filtreStatut==="encours"?!enRetard0:true);
+      });
+    }
+
     var tbody=document.getElementById("proj-remb-tbody");
     if(!tbody)return;
     if(!filtParts.length){tbody.innerHTML="<tr><td colspan='8'><div class='empty'>Aucun remboursement</div></td></tr>";return;}
@@ -10783,7 +10795,16 @@ function payerStripe(type){
 
     <!-- RETARDS - LISTE -->
     <div class="page" id="page-retards-liste">
-      <div class="card" style="padding:0"><div class="table-wrap"><table>
+      <div class="card" style="padding:0">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span style="font-weight:600;font-size:15px">Retards</span>
+          <select id="ret-filter" onchange="rRets()" style="margin-left:auto;width:180px">
+            <option value="">Tous les statuts</option>
+            <option value="impaye">Impayé</option>
+            <option value="paye">Payé</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table>
         <thead><tr><th>Membre</th><th>Motif</th><th>Montant</th><th>Date</th><th>Statut</th><th>Actions</th></tr></thead>
         <tbody id="ret-tbody"></tbody>
       </table></div></div>
@@ -10806,7 +10827,16 @@ function payerStripe(type){
 
     <!-- AMENDES - LISTE -->
     <div class="page" id="page-amendes-liste">
-      <div class="card" style="padding:0"><div class="table-wrap"><table>
+      <div class="card" style="padding:0">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span style="font-weight:600;font-size:15px">Amendes</span>
+          <select id="am-filter" onchange="rAms()" style="margin-left:auto;width:180px">
+            <option value="">Tous les statuts</option>
+            <option value="impaye">Impayé</option>
+            <option value="paye">Payé</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table>
         <thead><tr><th>Membre</th><th>Motif</th><th>Montant</th><th>Date</th><th>Statut</th><th>Actions</th></tr></thead>
         <tbody id="am-tbody"></tbody>
       </table></div></div>
@@ -10895,7 +10925,13 @@ function payerStripe(type){
       <div class="card" style="padding:0">
         <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <span style="font-weight:600;font-size:15px">Versements Projets</span>
-          <select id="proj-remb-filter" onchange="rProjRemb()" style="margin-left:auto;width:200px"><option value="">Tous les projets</option></select>
+          <select id="proj-remb-statut-filter" onchange="rProjRemb()" style="margin-left:auto;width:160px">
+            <option value="">Tous les statuts</option>
+            <option value="solde">Soldé</option>
+            <option value="retard">En retard</option>
+            <option value="encours">En cours</option>
+          </select>
+          <select id="proj-remb-filter" onchange="rProjRemb()" style="width:200px"><option value="">Tous les projets</option></select>
         </div>
         <div class="table-wrap"><table>
           <thead><tr><th>Projet</th><th>Membre</th><th>Quote-part</th><th>Payé</th><th>Restant</th><th>Délai</th><th>Statut</th><th>Paiement</th></tr></thead>
