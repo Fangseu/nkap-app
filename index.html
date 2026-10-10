@@ -2338,7 +2338,12 @@ function saveMembre(){
         if(btn){btn.disabled=false;btn.textContent='Enregistrer';}
         closeMO("modal-m");
         resetPhotoForm();
-        refreshCache(true).then(rMembres);
+        refreshCache(true).then(function(){
+          rMembres();
+          // Réunions à venir chez ce membre : rafraîchir le lieu (nom/adresse modifiés)
+          var lh=lieuHote(membreId);
+          if(lh)sb.from("reunions").update({lieu:lh}).eq("association_id",CA.id).eq("hote_membre_id",membreId).gte("date_reunion",td()).then(function(){});
+        });
       });
     });
   }
@@ -5958,6 +5963,13 @@ function renderMembrePortal(m,mid,aid){
         (adr?'<a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(adr)+'" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="margin-top:10px;display:inline-flex;text-decoration:none">🧭 Itinéraire</a>':'')+
         '</div>';
     })()+
+    // Mon adresse (utilisée quand je reçois une réunion)
+    '<div class="card" style="margin-bottom:14px"><div class="card-title">🏠 Mon adresse</div>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Affichée aux membres comme lieu de réunion quand c\'est vous qui recevez.</div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+    '<input type="text" id="mb-adresse" value="'+esc(m.adresse||"")+'" placeholder="Ex: Rue de la Loi 12, 1000 Bruxelles" maxlength="300" style="flex:1;min-width:200px">'+
+    '<button class="btn btn-primary btn-sm" style="width:auto" onclick="sauverMonAdresse()">Enregistrer</button>'+
+    '</div></div>'+
     saisonSel_str+
     '<div class="card"><div style="margin-bottom:16px">'+
     '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:8px"><span>Taux de présence</span><span style="color:'+pctC+'">'+pct+'% ('+nbP+'/'+reuns.length+')</span></div>'+
@@ -7089,6 +7101,17 @@ function soumettreDeclaration(mid, aid){
     if(E("decl-montant"))E("decl-montant").value="";
     if(E("decl-ref"))E("decl-ref").value="";
     if(sel)sel.value="";
+  });
+}
+
+// Le membre met à jour sa propre adresse (fonction Supabase sécurisée : seul le champ adresse de SA fiche)
+function sauverMonAdresse(){
+  var el=E("mb-adresse");if(!el||!window._mbAid)return;
+  var adr=el.value.trim();
+  sb.rpc("maj_mon_adresse",{p_association_id:window._mbAid,p_adresse:adr}).then(function(r){
+    if(r.error){toastErr("Erreur : "+r.error.message);return;}
+    if(window._mbM)window._mbM.adresse=adr||null;
+    toastOk("✅ Adresse enregistrée");
   });
 }
 
