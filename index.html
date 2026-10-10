@@ -3336,6 +3336,8 @@ function verrouillerTirage(tId, btn){
     date_verrouillage:new Date().toISOString()
   }).eq("id",tId).then(function(){
     genererCotisations(tId);
+    // Mode "bénéficiaire tontine" : les réunions à venir sans hôte reçoivent le bénéficiaire du mois
+    appliquerHotesTontine();
     // Le tirage verrouillé se consulte désormais dans l'espace Calendrier
     // (et les cotisations générées dans le module Cotisations), qu'on
     // clique "Verrouiller" depuis la liste des cycles ou depuis le
@@ -4485,6 +4487,7 @@ function initRecurrence(){
   if(E('conf-recur-jour'))E('conf-recur-jour').value=conf.jour||15;
   if(E('conf-recur-heure'))E('conf-recur-heure').value=conf.heure||'17:00';
   if(E('conf-recur-lieu'))E('conf-recur-lieu').value=conf.lieu||'';
+  if(E('conf-recur-hote'))E('conf-recur-hote').value=conf.hote||'aucun';
   if(E('conf-recur-rappel'))E('conf-recur-rappel').value=conf.rappel||2;
   if(E('conf-recur-avance'))E('conf-recur-avance').value=conf.avance||2;
   toggleJourFixe();
@@ -4503,6 +4506,7 @@ function sauverRecurrence(){
     jour:parseEntier(gV('conf-recur-jour'),{fallback:15,min:1,max:31}),
     heure:gV('conf-recur-heure')||'17:00',
     lieu:gV('conf-recur-lieu')||'',
+    hote:gV('conf-recur-hote')||'aucun',
     rappel:parseEntier(gV('conf-recur-rappel'),{fallback:0,min:0,max:30}),
     avance:parseEntier(gV('conf-recur-avance'),{fallback:2,min:0,max:30})
   };
@@ -4654,8 +4658,76 @@ function genererReunionsRecurrentes(){
       }
       if(r)r.innerHTML='<span style="color:var(--green)">✅ '+nouvelles.length+' réunion(s) générée(s) : '+
         nouvelles.map(fmtNom).join(', ')+'</span>';
+      // Mode "bénéficiaire tontine" : renseigner l'hôte des nouvelles réunions
+      appliquerHotesTontine();
     });
   });
+}
+
+// ── Hôte des réunions : lieu = "Chez Prénom Nom — adresse" ──────────
+function lieuHote(membreId){
+  var m=MC.find(function(x){return x.id===membreId;});
+  if(!m)return null;
+  var adr=(m.adresse||"").trim();
+  return "Chez "+m.prenom+" "+m.nom+(adr?" — "+adr:"");
+}
+
+// Mode "tontine" : hôte = 1er bénéficiaire (cycle verrouillé/en cours) du mois de chaque
+// réunion à venir. Ne touche que les réunions sans hôte, pour garder les changements manuels.
+function appliquerHotesTontine(cb){
+  var conf=(CA&&CA.config_recurrence)||{};
+  if(!CA||conf.hote!=="tontine"){if(cb)cb(0);return;}
+  Promise.all([
+    sb.from("reunions").select("id,date_reunion").eq("association_id",CA.id).gte("date_reunion",td()).is("hote_membre_id",null),
+    sb.from("tontine_tirage").select("membre_id,mois_calendrier,mois_num,tontines(statut)").eq("association_id",CA.id).gte("mois_calendrier",td().slice(0,7))
+  ]).then(function(rs){
+    var reuns=rs[0].data||[];
+    var slots=(rs[1].data||[]).filter(function(s){return s.tontines&&(s.tontines.statut==="verrouille"||s.tontines.statut==="en_cours");});
+    slots.sort(function(a,b){return (a.mois_num||0)-(b.mois_num||0);});
+    var parMois={};
+    slots.forEach(function(s){if(!parMois[s.mois_calendrier])parMois[s.mois_calendrier]=s.membre_id;});
+    var ups=reuns.filter(function(r){return parMois[r.date_reunion.slice(0,7)];}).map(function(r){
+      var mid=parMois[r.date_reunion.slice(0,7)];
+      return sb.from("reunions").update({hote_membre_id:mid,lieu:lieuHote(mid)}).eq("id",r.id);
+    });
+    Promise.all(ups).then(function(){if(cb)cb(ups.length);});
+  });
+}
+
+// Planning d'accueil (page Réunions) : changer l'hôte d'une réunion à venir
+function changerHoteReunion(reunId,membreId){
+  var conf=(CA&&CA.config_recurrence)||{};
+  var lieu=membreId?lieuHote(membreId):(conf.lieu||null);
+  sb.from("reunions").update({hote_membre_id:membreId||null,lieu:lieu}).eq("id",reunId).eq("association_id",CA.id).then(function(r){
+    if(r.error){toastErr("Erreur : "+r.error.message);return;}
+    toastOk(membreId?"Hôte enregistré : "+mNm(membreId):"Hôte retiré");
+    rReuns();
+  });
+}
+
+function rPlanningAccueil(){
+  var el=E("reun-planning-accueil");if(!el)return;
+  var t=td();
+  var futures=(window._reunionsCache||[]).filter(function(r){return r.date_reunion>=t;})
+    .sort(function(a,b){return a.date_reunion<b.date_reunion?-1:1;});
+  if(!futures.length){el.innerHTML="";return;}
+  var actifs=MC.filter(function(m){return m.statut==="actif";})
+    .sort(function(a,b){return (a.prenom+a.nom).localeCompare(b.prenom+b.nom);});
+  var sansAdr=0;
+  var rows=futures.map(function(ru){
+    var h=ru.hote_membre_id;
+    if(h){var mh=MC.find(function(x){return x.id===h;});if(mh&&!(mh.adresse||"").trim())sansAdr++;}
+    return '<tr><td style="white-space:nowrap">'+fdD(ru.date_reunion)+'</td>'+
+      '<td><select onchange="changerHoteReunion(\''+ru.id+'\',this.value)" style="min-width:170px">'+
+      '<option value="">— Personne —</option>'+
+      actifs.map(function(m){return '<option value="'+m.id+'"'+(m.id===h?' selected':'')+'>'+esc(m.prenom+" "+m.nom)+'</option>';}).join("")+
+      '</select></td>'+
+      '<td style="font-size:12px;color:var(--text2)">'+esc(ru.lieu||"--")+'</td></tr>';
+  }).join("");
+  el.innerHTML='<div class="card" style="margin-top:16px"><div class="card-title">🏠 Planning d\'accueil — réunions à venir</div>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:10px">Choisissez le membre qui reçoit : le lieu devient « Chez … — adresse » et apparaît dans les rappels email et l\'espace membre.</div>'+
+    (sansAdr?'<div class="alert alert-warning" style="margin-bottom:10px">⚠️ '+sansAdr+' hôte(s) sans adresse dans leur fiche membre — complétez-la pour qu\'elle s\'affiche.</div>':'')+
+    '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Reçu par</th><th>Lieu</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
 }
 
 function rFC(){
@@ -4761,6 +4833,7 @@ function rReuns(){
     window._reunionsCache=reuns;
     remplirFiltreSaisonReun(reuns,sai);
     rReunsTable();
+    rPlanningAccueil();
     var reunSai=reuns.filter(function(r){return r.date_reunion>=deb&&r.date_reunion<=td();});
     var tot=reunSai.length,nbS=(CA&&CA.nb_absences_avant_amende)||3;
     sH("reun-suivi-tbody",MC.filter(function(m){return m.statut==="actif";}).map(function(m){
@@ -4809,7 +4882,7 @@ function rReunsTable(){
   sH("reun-tbody",reuns.length?reuns.map(function(ru){
     var aH=(ru.presents||[]).filter(function(id){return !(ru.retards_list||[]).find(function(x){return x.membreId===id&&x.montant>0;});});
     var enR=(ru.retards_list||[]).filter(function(x){return x.montant>0;});
-    return "<tr><td>"+fdD(ru.date_reunion)+"</td><td>"+ru.titre+"</td>"+
+    return "<tr><td>"+fdD(ru.date_reunion)+"</td><td>"+ru.titre+(ru.lieu?'<div style="font-size:11px;color:var(--text3);margin-top:2px">📍 '+esc(ru.lieu)+'</div>':'')+"</td>"+
       "<td><div style=\"display:flex;flex-wrap:wrap;gap:3px\">"+aH.map(function(id){return avEl(id);}).join("")+(aH.length===0?"<span>--</span>":"")+"</div></td>"+
       "<td><div style=\"display:flex;flex-wrap:wrap;gap:3px\">"+enR.map(function(x){return '<div style="position:relative">'+avEl(x.membreId)+'<span style="position:absolute;top:-3px;right:-3px;background:var(--accent);color:#000;font-size:8px;border-radius:8px;padding:0 2px;font-weight:700">'+fmt(x.montant)+"</span></div>";}).join("")+(enR.length===0?"<span>--</span>":"")+"</div></td>"+
       "<td><div style=\"display:flex;flex-wrap:wrap;gap:3px\">"+(ru.absents||[]).map(function(id){return '<div style="opacity:.4">'+avEl(id)+"</div>";}).join("")+((ru.absents||[]).length===0?'<span class="badge bg">Tous</span>':"")+"</div></td>"+
@@ -5593,7 +5666,7 @@ function chargeMembrePortal(ud){
       sb.from("retards").select("*").eq("association_id",aid).eq("membre_id",mid).order("date_infraction",{ascending:false}),
       sb.from("amendes").select("*").eq("association_id",aid).eq("membre_id",mid).order("date_infraction",{ascending:false}),
       sb.from("remboursements").select("*").eq("association_id",aid).eq("membre_id",mid).order("echeance",{ascending:true}),
-      sb.from("reunions").select("id,titre,date_reunion,presents,absents,pv_valide").eq("association_id",aid).order("date_reunion",{ascending:false}),
+      sb.from("reunions").select("id,titre,date_reunion,presents,absents,pv_valide,lieu,heure_debut,notes").eq("association_id",aid).order("date_reunion",{ascending:false}),
       sb.from("dons").select("*").eq("association_id",aid).eq("beneficiaire_id",mid).order("date_don",{ascending:false}),
       sb.from("prets").select("*").eq("association_id",aid).eq("beneficiaire_id",mid).order("date_pret",{ascending:false}),
       sb.from("fonds_adhesion").select("solde").eq("association_id",aid).eq("membre_id",mid).maybeSingle(),
@@ -5866,6 +5939,25 @@ function renderMembrePortal(m,mid,aid){
 
     // ── ONGLET : RÉUNIONS ─────────────────────────────────────────
     '<div id="mbt-reunions" class="mb-tab-panel" style="display:none">'+
+    // Prochaine réunion (date / heure / lieu + itinéraire)
+    (function(){
+      var proch=(d.reuns||[]).filter(function(r){return r.date_reunion>=t;})
+        .sort(function(a,b){return a.date_reunion<b.date_reunion?-1:1;})[0];
+      if(!proch)return '';
+      var hm=proch.heure_debut?String(proch.heure_debut).slice(0,5):((proch.notes||"").match(/Heure : (\d{1,2}:\d{2})/)||[])[1]||"";
+      var lieu=proch.lieu||"";
+      // Pour l'itinéraire : l'adresse après "Chez X — ", sinon le lieu entier
+      var adr=lieu.indexOf(" — ")>=0?lieu.split(" — ").slice(1).join(" — "):(lieu.indexOf("Chez ")===0?"":lieu);
+      return '<div class="card" style="margin-bottom:14px;border:1.5px solid rgba(26,158,122,.3)">'+
+        '<div class="card-title">📅 Prochaine réunion</div>'+
+        '<div style="font-weight:600;font-size:14px;margin-bottom:6px">'+esc(proch.titre||"Réunion")+'</div>'+
+        '<div style="font-size:13px;color:var(--text2);line-height:1.8">'+
+        '🗓 '+fdD(proch.date_reunion)+(hm?' · 🕐 '+hm:'')+'<br>'+
+        '📍 '+(lieu?esc(lieu):'<span style="color:var(--text3)">Lieu à confirmer</span>')+
+        '</div>'+
+        (adr?'<a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(adr)+'" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="margin-top:10px;display:inline-flex;text-decoration:none">🧭 Itinéraire</a>':'')+
+        '</div>';
+    })()+
     saisonSel_str+
     '<div class="card"><div style="margin-bottom:16px">'+
     '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:8px"><span>Taux de présence</span><span style="color:'+pctC+'">'+pct+'% ('+nbP+'/'+reuns.length+')</span></div>'+
@@ -5875,7 +5967,7 @@ function renderMembrePortal(m,mid,aid){
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px">'+
         '<div style="flex:1;min-width:0">'+
         '<div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+r.titre+'</div>'+
-        '<div style="font-size:11px;color:var(--text3)">'+fdD(r.date_reunion)+'</div>'+
+        '<div style="font-size:11px;color:var(--text3)">'+fdD(r.date_reunion)+(r.lieu?' · 📍 '+esc(r.lieu):'')+'</div>'+
         '</div>'+
         '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">'+
         '<span class="badge '+(pr?"badge-green":"badge-red")+'">'+(pr?"✓ Présent":"✗ Absent")+'</span>'+
@@ -10773,6 +10865,7 @@ function payerStripe(type){
         <thead><tr><th>Date</th><th>Titre</th><th>✅ À l'heure</th><th>⏰ Retards</th><th>❌ Absents</th><th>Actions</th></tr></thead>
         <tbody id="reun-tbody"></tbody>
       </table></div></div>
+      <div id="reun-planning-accueil"></div>
       <div id="reun-bilans-liste"></div>
     </div>
 
@@ -11330,6 +11423,15 @@ function payerStripe(type){
             <div class="form-group" style="grid-column:1/-1">
               <label>Lieu par défaut</label>
               <input type="text" id="conf-recur-lieu" placeholder="Ex: Salle polyvalente, chez M. Dupont...">
+            </div>
+            <div class="form-group" style="grid-column:1/-1">
+              <label>Qui reçoit la réunion ?</label>
+              <select id="conf-recur-hote">
+                <option value="aucun">Personne — utiliser le lieu par défaut</option>
+                <option value="tontine">Le bénéficiaire de la tontine du mois</option>
+                <option value="planning">Planning d'accueil manuel (page Réunions)</option>
+              </select>
+              <div style="font-size:11px;color:var(--text3);margin-top:4px">Le lieu devient « Chez Prénom Nom — adresse » (adresse de la fiche membre). Modifiable mois par mois dans le Planning d'accueil de la page Réunions.</div>
             </div>
             <div class="form-group">
               <label>Rappel aux membres (jours avant)</label>
