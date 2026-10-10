@@ -5597,6 +5597,15 @@ function chargeMembrePortal(ud){
       sb.from("votes_reponses").select("vote_id,choix").eq("association_id",aid).eq("membre_id",mid),
       // Bilans de saison archivés
       sb.from("bilans_saison").select("id,saison,date_debut,date_fin,date_cloture").eq("association_id",aid).order("saison",{ascending:false}),
+      // Solde caisse (Fond Caisse) — même calcul que le dashboard admin : Retards+Amendes payés - Sorties
+      sb.from("retards").select("montant").eq("association_id",aid).eq("statut","paye"),
+      sb.from("amendes").select("montant").eq("association_id",aid).eq("statut","paye"),
+      sb.from("sorties_caisse").select("montant").eq("association_id",aid),
+      // Caisses perso — mêmes requêtes que le dashboard admin
+      sb.from("caisses_perso").select("id,nom,couleur").eq("association_id",aid).order("created_at"),
+      sb.from("caisse_operations").select("caisse_id,type,montant").eq("association_id",aid),
+      // Statuts des tontines — pour ne retenir que les cycles en cours/verrouillés
+      sb.from("tontines").select("id,statut").eq("association_id",aid),
     ]).then(function(rs){
       window._mbData={
         cots:rs[0].data||[],rets:rs[1].data||[],ams:rs[2].data||[],
@@ -5610,8 +5619,33 @@ function chargeMembrePortal(ud){
         tTirageAll:rs[13].data||[],
         votes:rs[14].data||[],
         mesVotesReponses:rs[15].data||[],
-        bilansSaison:rs[16].data||[]
+        bilansSaison:rs[16].data||[],
+        soldeCaisse:(rs[17].data||[]).reduce(function(s,r){return s+(+r.montant);},0)+(rs[18].data||[]).reduce(function(s,a){return s+(+a.montant);},0)-(rs[19].data||[]).reduce(function(s,so){return s+(+so.montant);},0),
+        caissesPerso:(rs[20].data||[]).map(function(c){
+          var ops=(rs[21].data||[]).filter(function(o){return o.caisse_id===c.id;});
+          var totE=ops.filter(function(o){return o.type==="entree";}).reduce(function(s,o){return s+(+o.montant);},0);
+          var totS=ops.filter(function(o){return o.type==="sortie";}).reduce(function(s,o){return s+(+o.montant);},0);
+          return {id:c.id,nom:c.nom,couleur:c.couleur,solde:totE-totS};
+        }),
+        tontinesStatuts:rs[22].data||[]
       };
+      // Bénéficiaires tontine — ce mois / mois prochain (même calcul que le dashboard admin)
+      (function(){
+        var dNow=new Date(),dNext=new Date(dNow.getFullYear(),dNow.getMonth()+1,1);
+        var curYM=dNow.getFullYear()+"-"+(dNow.getMonth()<9?"0":"")+(dNow.getMonth()+1);
+        var nextYM=dNext.getFullYear()+"-"+(dNext.getMonth()<9?"0":"")+(dNext.getMonth()+1);
+        var tontineValidIds={};
+        window._mbData.tontinesStatuts.forEach(function(t){if(t.statut==="en_negociation"||t.statut==="verrouille"||t.statut==="en_cours")tontineValidIds[t.id]=true;});
+        var gagnantsCur=[],gagnantsNext=[];
+        window._mbData.tTirageAll.forEach(function(s){
+          if(!tontineValidIds[s.tontine_id])return;
+          var nom=s.membres?s.membres.prenom+" "+s.membres.nom:"?";
+          var item={nom:nom,membre_id:s.membre_id,montant:s.montant_gain};
+          if(s.mois_calendrier===curYM)gagnantsCur.push(item);
+          else if(s.mois_calendrier===nextYM)gagnantsNext.push(item);
+        });
+        window._mbData.tontineBenef={cur:gagnantsCur,next:gagnantsNext};
+      })();
       // Construire la liste des saisons disponibles
       var saisonsSet={};
       var saisonCourante=saison();
@@ -5719,7 +5753,19 @@ function renderMembrePortal(m,mid,aid){
     '<div class="stat-card red"><div class="stat-label">Amendes dues</div><div class="stat-val">'+fmtM(amImp)+'</div></div>'+
     '<div class="stat-card yellow"><div class="stat-label">Remb. en cours</div><div class="stat-val">'+fmtM(rembTot)+'</div></div>'+
     '<div class="stat-card" style="border-color:'+pctC+'"><div class="stat-label">Présence</div><div class="stat-val" style="color:'+pctC+'">'+pct+'%</div><div class="stat-sub">'+nbP+'/'+reuns.length+'</div></div>'+
+    '<div class="stat-card '+(d.soldeCaisse>=0?"green":"red")+'"><div class="stat-label">Solde caisse</div><div class="stat-val" style="color:'+(d.soldeCaisse>=0?"var(--green)":"var(--red)")+'">'+fmtM(d.soldeCaisse)+'</div></div>'+
     '</div>'+
+    (d.caissesPerso&&d.caissesPerso.length?
+      '<div class="card" style="margin-bottom:16px"><div class="card-title">🏦 Caisses perso</div>'+
+      d.caissesPerso.map(function(cx){
+        var col=cx.couleur||"var(--accent)";
+        var sc=cx.solde>=0?"var(--green)":"var(--red)";
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">'+
+          '<span><span style="color:'+col+'">●</span> '+cx.nom+'</span>'+
+          '<span style="font-weight:600;color:'+sc+'">'+fmtM(cx.solde)+'</span></div>';
+      }).join('')+
+      '</div>'
+    :'')+
     '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">'+
     _mbNavCard('finances','💳','Finances',nbAlerts?nbAlerts+' alerte(s)':'Cotisations, retards, déclarations')+
     _mbNavCard('reunions','📅','Réunions',pct+'% présence · '+nbP+'/'+reuns.length+' réunions')+
@@ -5831,6 +5877,21 @@ function renderMembrePortal(m,mid,aid){
 
     // ── ONGLET : TONTINE ─────────────────────────────────────────
     (hasTontine?'<div id="mbt-tontine" class="mb-tab-panel" style="display:none">'+
+    (function(){
+      var tb=d.tontineBenef||{cur:[],next:[]};
+      function _mbBenefListH(list){
+        if(!list.length)return '<div class="empty" style="padding:8px 0">Aucun</div>';
+        return list.map(function(g){
+          return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+avEl(g.membre_id)+
+            '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(g.nom)+'</div></div>'+
+            '<span style="font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0">'+fmtM(g.montant)+'</span></div>';
+        }).join("");
+      }
+      return '<div class="card" style="margin-bottom:14px"><div class="card-title">🎰 Tontine — bénéficiaires</div>'+
+        '<div style="margin-bottom:14px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">🎯 Ce mois-ci</div>'+_mbBenefListH(tb.cur)+'</div>'+
+        '<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">📆 Mois prochain</div>'+_mbBenefListH(tb.next)+'</div>'+
+        '</div>';
+    })()+
     (function(){
       var tCots2=d.tCots||[],tTirage2=d.tTirage||[],tDistribs2=d.tDistribs||[],tEchanges2=d.tEchanges||[];
       var cycles={};
