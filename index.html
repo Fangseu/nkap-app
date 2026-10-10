@@ -1056,7 +1056,7 @@ function chargeDeclarations(){
         '<div style="flex:1;min-width:160px">'+
         '<div style="font-size:14px;font-weight:600;color:var(--text)">'+nom+'</div>'+
         '<div style="font-size:12px;color:var(--text2);margin-top:2px">'+
-        '<span class="badge badge-yellow" style="margin-right:6px">'+(d.type==="tontine_cotisation"?"Tontine":d.type)+'</span>'+
+        '<span class="badge badge-yellow" style="margin-right:6px">'+(d.type==="tontine_cotisation"?"Tontine":d.type==="projet"?"Projet":d.type)+'</span>'+
         '<strong>'+d.montant+' '+sym+'</strong> · '+fdD(d.date_paiement)+
         (d.reference?' · <em style="color:var(--text3)">'+d.reference+'</em>':'')+
         '</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Déclaré le '+fdD((d.created_at||"").slice(0,10))+'</div>'+
@@ -1207,6 +1207,24 @@ function validerDeclaration(declId,membreId,type,montant,datePaie,cotisationId){
         valide_par:CU.id,
         date_validation:new Date().toISOString()
       }).eq("id",d.tontine_cotisation_id);
+
+    } else if(type==="projet"&&d.projet_participant_id){
+      // Versement projet : même logique que _enregistrerVersementProjet (solde relu en base + entrée dans la caisse du projet)
+      doUpdate=sb.from("projets_participants").select("id,solde_restant,projet_id,projets(nom,caisse_id)").eq("id",d.projet_participant_id).single().then(function(r2){
+        var pp=r2.data;if(!pp)return {};
+        var mt=+d.montant||+montant;
+        var nvSolde=+(Math.max(0,(+pp.solde_restant)-mt)).toFixed(2);
+        var proj=pp.projets||{};
+        return sb.from("projets_participants").update({solde_restant:nvSolde}).eq("id",pp.id).then(function(){
+          if(!proj.caisse_id)return {};
+          return sb.from("caisse_operations").insert({
+            caisse_id:proj.caisse_id,association_id:aid,type:"entree",
+            source:"Contribution projet",membre_id:membreId,montant:mt,
+            description:"Versement projet « "+(proj.nom||"")+" » (déclaration membre)"+(nvSolde<=0?" (solde soldé)":""),
+            date_operation:datePaie||td()
+          });
+        });
+      });
 
     } else {
       doUpdate=Promise.resolve({});
@@ -5606,6 +5624,8 @@ function chargeMembrePortal(ud){
       sb.from("caisse_operations").select("caisse_id,type,montant").eq("association_id",aid),
       // Statuts des tontines — pour ne retenir que les cycles en cours/verrouillés
       sb.from("tontines").select("id,statut").eq("association_id",aid),
+      // Projets du membre — quote-part / solde restant
+      sb.from("projets_participants").select("id,projet_id,quote_part,solde_restant,date_echeance,projets(nom,statut,date_limite)").eq("association_id",aid).eq("membre_id",mid),
     ]).then(function(rs){
       window._mbData={
         cots:rs[0].data||[],rets:rs[1].data||[],ams:rs[2].data||[],
@@ -5627,7 +5647,8 @@ function chargeMembrePortal(ud){
           var totS=ops.filter(function(o){return o.type==="sortie";}).reduce(function(s,o){return s+(+o.montant);},0);
           return {id:c.id,nom:c.nom,couleur:c.couleur,solde:totE-totS};
         }),
-        tontinesStatuts:rs[22].data||[]
+        tontinesStatuts:rs[22].data||[],
+        projetsMembre:(rs[23].data||[]).filter(function(pp){return pp.projets&&pp.projets.statut!=="cloture";})
       };
       // Bénéficiaires tontine — ce mois / mois prochain (même calcul que le dashboard admin)
       (function(){
@@ -5693,6 +5714,9 @@ function renderMembrePortal(m,mid,aid){
   var pct=reuns.length?Math.round(nbP/reuns.length*100):100;
   var pctC=pct>=80?"var(--green)":pct>=50?"var(--accent)":"var(--red)";
   var t=td();
+  // Projets en cours du membre (pas de filtre saison)
+  var projetsM=d.projetsMembre||[];
+  var projReste=projetsM.reduce(function(s,pp){return s+Math.max(0,+pp.solde_restant||0);},0);
 
   // ── Helpers ────────────────────────────────────────────────────
   var hasTontine=(d.tCots&&d.tCots.length)||(d.tTirage&&d.tTirage.length)||(d.tEchanges&&d.tEchanges.length);
@@ -5751,10 +5775,30 @@ function renderMembrePortal(m,mid,aid){
     '<div class="stat-card green"><div class="stat-label">Cotisations</div><div class="stat-val">'+fmtM(totC)+'</div><div class="stat-sub">'+(saisonSel-1)+'-'+saisonSel+'</div></div>'+
     '<div class="stat-card red"><div class="stat-label">Retards dus</div><div class="stat-val">'+fmtM(retImp)+'</div></div>'+
     '<div class="stat-card red"><div class="stat-label">Amendes dues</div><div class="stat-val">'+fmtM(amImp)+'</div></div>'+
+    '<div class="stat-card '+(projReste>0?"red":"green")+'"><div class="stat-label">Projets — reste à payer</div>'+
+      (projReste>0?'<div class="stat-val">'+fmtM(projReste)+'</div><div class="stat-sub">'+projetsM.filter(function(pp){return +pp.solde_restant>0;}).length+' projet(s)</div>'
+        :'<div class="stat-val" style="color:var(--green)">✓ En ordre</div>')+
+    '</div>'+
     '<div class="stat-card yellow"><div class="stat-label">Remb. en cours</div><div class="stat-val">'+fmtM(rembTot)+'</div></div>'+
     '<div class="stat-card" style="border-color:'+pctC+'"><div class="stat-label">Présence</div><div class="stat-val" style="color:'+pctC+'">'+pct+'%</div><div class="stat-sub">'+nbP+'/'+reuns.length+'</div></div>'+
     '<div class="stat-card '+(d.soldeCaisse>=0?"green":"red")+'"><div class="stat-label">Solde caisse</div><div class="stat-val" style="color:'+(d.soldeCaisse>=0?"var(--green)":"var(--red)")+'">'+fmtM(d.soldeCaisse)+'</div></div>'+
     '</div>'+
+    (projetsM.length?
+      '<div class="card" style="margin-bottom:16px"><div class="card-title">🏗 Mes projets</div>'+
+      '<div class="table-wrap"><table><thead><tr><th>Projet</th><th>Quote-part</th><th>Payé</th><th>Reste</th><th>Statut</th></tr></thead><tbody>'+
+      projetsM.map(function(pp){
+        var qp=+pp.quote_part||0,reste=Math.max(0,+pp.solde_restant||0),paye=Math.max(0,qp-reste);
+        var ech=pp.date_echeance||(pp.projets&&pp.projets.date_limite)||"";
+        var st=reste<=0?'<span class="badge badge-green">✅ En ordre</span>'
+          :(ech&&ech<t?'<span class="badge badge-red">🔴 En retard</span>'
+          :'<span class="badge badge-yellow">🟠 Reste '+fmtM(reste)+(ech?' (avant le '+fdD(ech)+')':'')+'</span>');
+        return '<tr><td>'+esc((pp.projets&&pp.projets.nom)||"Projet")+'</td><td>'+fmtM(qp)+'</td><td style="color:var(--green)">'+fmtM(paye)+'</td>'+
+          '<td style="font-weight:600;color:'+(reste>0?"var(--red)":"var(--green)")+'">'+fmtM(reste)+'</td><td>'+st+'</td></tr>';
+      }).join('')+
+      '</tbody></table></div>'+
+      (projReste>0?'<div style="font-size:12px;color:var(--text3);margin-top:8px">💳 Pour payer, utilisez « Déclarer un paiement » dans l\'onglet Finances.</div>':'')+
+      '</div>'
+    :'')+
     (d.caissesPerso&&d.caissesPerso.length?
       '<div class="card" style="margin-bottom:16px"><div class="card-title">🏦 Caisses perso</div>'+
       d.caissesPerso.map(function(cx){
@@ -6797,9 +6841,11 @@ function buildDeclZone(mid, aid, sym, cots, tCots){
     sb.from("amendes").select("*").eq("association_id",aid).eq("membre_id",mid).eq("statut","impaye"),
     sb.from("remboursements").select("*").eq("association_id",aid).eq("membre_id",mid).eq("statut","en attente"),
     sb.from("fonds_adhesion").select("solde").eq("association_id",aid).eq("membre_id",mid).maybeSingle(),
+    sb.from("projets_participants").select("id,solde_restant,projets(nom,statut)").eq("association_id",aid).eq("membre_id",mid).gt("solde_restant",0),
   ]).then(function(rs){
     var rets=rs[0].data||[], ams=rs[1].data||[], rembs=rs[2].data||[];
     var soldeAdh=(rs[3].data&&rs[3].data.solde)||0;
+    var projsImp=(rs[4].data||[]).filter(function(pp){return pp.projets&&pp.projets.statut!=="cloture";});
     var cotsImp=cots.filter(function(c){return c.statut==="impaye";});
 
     var opts='<option value="">— Choisir ce que vous payez —</option>';
@@ -6836,6 +6882,15 @@ function buildDeclZone(mid, aid, sym, cots, tCots){
       opts+='<optgroup label="Remboursements en attente">';
       rembs.forEach(function(r){
         opts+='<option value="remboursement:'+r.id+':'+r.montant+'">Remb. '+r.type+' — éch. '+fdD(r.echeance)+" — "+r.montant+' '+sym+'</option>';
+      });
+      opts+='</optgroup>';
+    }
+
+    // Projets en cours avec un reste à payer (acompte possible)
+    if(projsImp.length){
+      opts+='<optgroup label="Projets">';
+      projsImp.forEach(function(pp){
+        opts+='<option value="projet:'+pp.id+':'+pp.solde_restant+'">'+esc(pp.projets.nom||"Projet")+' — reste '+pp.solde_restant+' '+sym+'</option>';
       });
       opts+='</optgroup>';
     }
@@ -6911,7 +6966,7 @@ function soumettreDeclaration(mid, aid){
   if(!date){showDeclMsg("Entrez la date du paiement","e");return;}
 
   var parts=sel.value.split(":");
-  var typeLabel=parts[0];        // cotisation | retard | amende | remboursement | adhesion | tontine_cotisation
+  var typeLabel=parts[0];        // cotisation | retard | amende | remboursement | adhesion | tontine_cotisation | projet
   var itemId=parts[1]||null;     // id exact de l'élément
   var extraId=parts[2]||null;    // tontine_id pour tontine_cotisation
   var btn=E("btn-submit-decl");
@@ -6927,6 +6982,7 @@ function soumettreDeclaration(mid, aid){
     remboursement_id:typeLabel==="remboursement"&&itemId?itemId:null,
     tontine_cotisation_id:typeLabel==="tontine_cotisation"&&itemId?itemId:null,
     tontine_id:typeLabel==="tontine_cotisation"&&extraId?extraId:null,
+    projet_participant_id:typeLabel==="projet"&&itemId?itemId:null,
     montant:montant,
     date_paiement:date,
     reference:ref||null,
