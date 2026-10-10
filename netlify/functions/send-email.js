@@ -51,6 +51,26 @@ function ligneCard(label, valeur) {
   </tr>`;
 }
 
+// Lieu cliquable : l'adresse (après "Chez X — ") ouvre Google Maps. Sans adresse → texte simple.
+function adresseDuLieu(lieu) {
+  const l = String(lieu || "");
+  if (l.indexOf(" — ") >= 0) return l.split(" — ").slice(1).join(" — ").trim();
+  return l.indexOf("Chez ") === 0 ? "" : l.trim();
+}
+function mapsUrl(lieu) {
+  const adr = adresseDuLieu(lieu);
+  return adr ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(adr) : "";
+}
+function ligneLieu(lieu) {
+  if (!lieu) return ligneCard("Lieu", "À confirmer");
+  const url = mapsUrl(lieu);
+  if (!url) return ligneCard("Lieu", lieu);
+  return `<tr>
+    <td style="padding:9px 0;color:${VERT_TEXTE};font-size:14px;text-align:left;vertical-align:top">Lieu</td>
+    <td style="padding:9px 0;font-size:15px;font-weight:800;text-align:right"><a href="${esc(url)}" style="color:${INDIGO};text-decoration:underline">${esc(lieu)}</a></td>
+  </tr>`;
+}
+
 function badge(texte, couleur) {
   if (!texte) return "";
   return `<span style="display:inline-block;padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;background:${couleur}1a;color:${couleur}">${esc(texte)}</span>`;
@@ -90,7 +110,7 @@ function contenuTemplate(template, data) {
         icone: "📅",
         titre: "Rappel de réunion",
         souslitre: "Une réunion est prévue prochainement",
-        lignes: ligneCard("Date", data.date) + ligneCard("Heure", data.heure) + ligneCard("Lieu", data.lieu || "À confirmer"),
+        lignes: ligneCard("Date", data.date) + ligneCard("Heure", data.heure) + ligneLieu(data.lieu),
         cloture: "Votre présence est importante. À bientôt !",
       };
     case "rappel_reunion_j1":
@@ -98,8 +118,17 @@ function contenuTemplate(template, data) {
         icone: "⏰",
         titre: "Réunion demain !",
         souslitre: "N'oubliez pas la réunion de demain",
-        lignes: ligneCard("Date", data.date) + ligneCard("Heure", data.heure) + ligneCard("Lieu", data.lieu || "À confirmer"),
+        lignes: ligneCard("Date", data.date) + ligneCard("Heure", data.heure) + ligneLieu(data.lieu),
         cloture: "Votre présence est importante. À bientôt !",
+      };
+    case "rappel_reunion_h2":
+      return {
+        icone: "🏠",
+        titre: "La réunion, c'est tout à l'heure !",
+        souslitre: "La famille, voici l'adresse de la maison pour ceux qui ne l'ont pas.",
+        lignes: ligneCard("Heure", data.heure) + (data.hote ? ligneCard("Chez", data.hote) : "") + ligneLieu(data.lieu),
+        itineraire: mapsUrl(data.lieu),
+        cloture: "À tout à l'heure !",
       };
     case "tour_tontine":
       return {
@@ -114,7 +143,7 @@ function contenuTemplate(template, data) {
         icone: "🎰",
         titre: "Votre tour de tontine approche !",
         souslitre: "Votre gain sera versé lors de la prochaine réunion",
-        lignes: ligneCard("Montant", data.montant) + ligneCard("Date réunion", data.date) + ligneCard("Heure", data.heure) + ligneCard("Lieu", data.lieu || "À confirmer"),
+        lignes: ligneCard("Montant", data.montant) + ligneCard("Date réunion", data.date) + ligneCard("Heure", data.heure) + ligneLieu(data.lieu),
         cloture: "Pensez à être présent(e) pour recevoir votre gain !",
       };
     case "rappel_projet":
@@ -239,6 +268,8 @@ function buildHtml(template, data) {
                  </table>`
               : ""
           }
+
+          ${c.itineraire ? `<table cellpadding="0" cellspacing="0" style="margin:20px auto 0"><tr><td style="border-radius:10px;background:${INDIGO}"><a href="${esc(c.itineraire)}" style="display:inline-block;padding:12px 26px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;font-family:Arial,sans-serif">🧭 Itinéraire</a></td></tr></table>` : ""}
 
           ${c.pastille ? `<div style="margin-top:18px">${c.pastille}</div>` : ""}
 

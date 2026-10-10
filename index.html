@@ -4677,6 +4677,17 @@ function lieuHote(membreId){
   return "Chez "+m.prenom+" "+m.nom+(adr?" — "+adr:"");
 }
 
+// Lieu → lien Google Maps sur l'adresse (après "Chez X — "). Sans adresse : texte simple.
+function lieuMapsUrl(lieu){
+  var l=String(lieu||"");
+  var adr=l.indexOf(" — ")>=0?l.split(" — ").slice(1).join(" — ").trim():(l.indexOf("Chez ")===0?"":l.trim());
+  return adr?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(adr):"";
+}
+function lieuLienH(lieu){
+  var u=lieuMapsUrl(lieu);
+  return u?'<a href="'+u+'" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline">'+esc(lieu)+'</a>':esc(lieu||"");
+}
+
 // Mode "tontine" : hôte = 1er bénéficiaire (cycle verrouillé/en cours) du mois de chaque
 // réunion à venir. Ne touche que les réunions sans hôte, pour garder les changements manuels.
 function appliquerHotesTontine(cb){
@@ -5951,16 +5962,15 @@ function renderMembrePortal(m,mid,aid){
       if(!proch)return '';
       var hm=proch.heure_debut?String(proch.heure_debut).slice(0,5):((proch.notes||"").match(/Heure : (\d{1,2}:\d{2})/)||[])[1]||"";
       var lieu=proch.lieu||"";
-      // Pour l'itinéraire : l'adresse après "Chez X — ", sinon le lieu entier
-      var adr=lieu.indexOf(" — ")>=0?lieu.split(" — ").slice(1).join(" — "):(lieu.indexOf("Chez ")===0?"":lieu);
+      var mapsU=lieuMapsUrl(lieu);
       return '<div class="card" style="margin-bottom:14px;border:1.5px solid rgba(26,158,122,.3)">'+
         '<div class="card-title">📅 Prochaine réunion</div>'+
         '<div style="font-weight:600;font-size:14px;margin-bottom:6px">'+esc(proch.titre||"Réunion")+'</div>'+
         '<div style="font-size:13px;color:var(--text2);line-height:1.8">'+
         '🗓 '+fdD(proch.date_reunion)+(hm?' · 🕐 '+hm:'')+'<br>'+
-        '📍 '+(lieu?esc(lieu):'<span style="color:var(--text3)">Lieu à confirmer</span>')+
+        '📍 '+(lieu?lieuLienH(lieu):'<span style="color:var(--text3)">Lieu à confirmer</span>')+
         '</div>'+
-        (adr?'<a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(adr)+'" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="margin-top:10px;display:inline-flex;text-decoration:none">🧭 Itinéraire</a>':'')+
+        (mapsU?'<a href="'+mapsU+'" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="margin-top:10px;display:inline-flex;text-decoration:none">🧭 Itinéraire</a>':'')+
         '</div>';
     })()+
     // Mon adresse (utilisée quand je reçois une réunion)
@@ -5979,7 +5989,7 @@ function renderMembrePortal(m,mid,aid){
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px">'+
         '<div style="flex:1;min-width:0">'+
         '<div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+r.titre+'</div>'+
-        '<div style="font-size:11px;color:var(--text3)">'+fdD(r.date_reunion)+(r.lieu?' · 📍 '+esc(r.lieu):'')+'</div>'+
+        '<div style="font-size:11px;color:var(--text3)">'+fdD(r.date_reunion)+(r.lieu?' · 📍 '+lieuLienH(r.lieu):'')+'</div>'+
         '</div>'+
         '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">'+
         '<span class="badge '+(pr?"badge-green":"badge-red")+'">'+(pr?"✓ Présent":"✗ Absent")+'</span>'+

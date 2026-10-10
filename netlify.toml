@@ -8,3 +8,6 @@
 
 [functions."rappels-quotidiens"]
   schedule = "0 7 * * *"
+
+[functions."rappel-reunion-2h"]
+  schedule = "*/15 * * * *"
