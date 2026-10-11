@@ -5253,7 +5253,9 @@ function genererPV(reunId){
       sb.from("fonds_adhesion").select("solde").eq("association_id",aid).maybeSingle(),
       sb.from("adhesions").select("montant,statut,date_paiement").eq("association_id",aid).lte("date_paiement",ru.date_reunion),
       // Versements tontine liés à cette réunion
-      sb.from("tontine_distributions").select("*").eq("association_id",aid).eq("reunion_id",reunId)
+      sb.from("tontine_distributions").select("*").eq("association_id",aid).eq("reunion_id",reunId),
+      // Signataires = Bureau enregistré en base (persistant, par association, lisible par les membres)
+      sb.from("bureau").select("president_id,secretaire_id").eq("association_id",aid).maybeSingle()
     ]).then(function(rs){
       var amendes=rs[0].data||[];
       var totAmendes=amendes.reduce(function(s,a){return s+(+a.montant);},0);
@@ -5284,8 +5286,12 @@ function genererPV(reunId){
       var dateReun=new Date(ru.date_reunion).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
 
       // Signatures électroniques
-      var president=MC.find(function(m){return m.role==="president";});
-      var secretaire=MC.find(function(m){return m.role==="secretaire";});
+      // Bureau en base d'abord ; sinon ancien choix "Signataires des PV" (navigateur)
+      var bur=(rs[9]&&rs[9].data)||{};
+      var sigLoc={};try{sigLoc=JSON.parse(localStorage.getItem("mboa-signataires")||"{}")||{};}catch(e){}
+      var presId=bur.president_id||sigLoc.president, secId=bur.secretaire_id||sigLoc.secretaire;
+      var president=presId?MC.find(function(m){return m.id===presId;}):null;
+      var secretaire=secId?MC.find(function(m){return m.id===secId;}):null;
 
       var html='<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'+
         '<title>PV — '+ru.titre+'</title>'+
@@ -11699,7 +11705,7 @@ function payerStripe(type){
             </select>
           </div>
         </div>
-        <div style="font-size:12px;color:var(--text3);margin-top:10px">Ces noms apparaîtront automatiquement dans la section signatures des PV générés.</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:10px">Les PV utilisent le <strong>Bureau</strong> enregistré (Membres → onglet Bureau) : président et secrétaire. Modifiez-le là-bas pour changer les signataires. Ce choix-ci ne sert que si aucun bureau n'est enregistré.</div>
       </div>
 
       <!-- MULTI-ADMIN -->
