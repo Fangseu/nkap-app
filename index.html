@@ -894,7 +894,7 @@ function dRemb(){return (CA&&CA.duree_remboursement)||3;}
 function mCol(id){var i=MC.findIndex(function(x){return x.id===id;});return COLS[Math.max(0,i)%COLS.length];}
 // Date d'un retard/amende : colonne réelle date_infraction (date_retard/date_amende = données démo)
 function dInfr(x){return (x&&(x.date_infraction||x.date_retard||x.date_amende))||"";}
-// ── « Les Mécènes malgré eux » : top des retards + amendes PAYÉS sur une saison ──
+// ── « Les Sponsors Officiels de la Caisse » : top des retards + amendes PAYÉS sur une saison ──
 function calcPodium(retsPayes,amsPayes,debSai,finSai){
   var parM={};
   function add(x,k){
@@ -911,8 +911,8 @@ function calcPodium(retsPayes,amsPayes,debSai,finSai){
 function podiumH(classement,nomFn,fmtFn,saisonLbl,moiId){
   var medailles=["🥇","🥈","🥉"];
   var top=classement.slice(0,3);
-  var h='<div class="card" style="margin-bottom:16px"><div class="card-title">💸 Les Mécènes malgré eux</div>'+
-    '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">Saison '+saisonLbl+' — ceux qui ont le plus généreusement nourri la caisse en retards &amp; amendes 😄</div>';
+  var h='<div class="card" style="margin-bottom:16px"><div class="card-title">🏆 Les Sponsors Officiels de la Caisse</div>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">Saison '+saisonLbl+' — merci à nos plus fidèles contributeurs en retards &amp; amendes 😄</div>';
   if(!top.length)return h+'<div class="empty" style="padding:8px 0">Personne pour l\'instant… tout le monde est à l\'heure 👏</div></div>';
   h+=top.map(function(p,i){
     return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'+
@@ -2226,7 +2226,7 @@ function rDash(){
       var tb='<div style="margin-bottom:14px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">🎯 Ce mois-ci</div>'+tBenefListH(gagnantsCur)+'</div>'+
         '<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">📆 Mois prochain</div>'+tBenefListH(gagnantsNext)+'</div>';
       sH("dash-tontine-benef",tontinesAll.length?tb:'<div class="empty">Aucune tontine active</div>');
-      // 💸 Les Mécènes malgré eux — saison en cours
+      // 🏆 Les Sponsors Officiels de la Caisse — saison en cours
       var saiP=saison();
       sH("dash-podium",podiumH(calcPodium(retsPayes,amsPayes,ds2(saiP-1),ds2(saiP)),mNm,function(v){return fmt(v)+" "+sym;},(saiP-1)+"-"+saiP,null));
 
@@ -5754,7 +5754,7 @@ function chargeMembrePortal(ud){
       sb.from("tontines").select("id,statut").eq("association_id",aid),
       // Projets du membre — quote-part / solde restant
       sb.from("projets_participants").select("id,projet_id,quote_part,solde_restant,date_echeance,projets(nom,statut,date_limite)").eq("association_id",aid).eq("membre_id",mid),
-      // Mécènes malgré eux : retards/amendes PAYÉS de tous les membres (classement)
+      // Sponsors Officiels de la Caisse : retards/amendes PAYÉS de tous les membres (classement)
       sb.from("retards").select("membre_id,montant,date_infraction,date_paiement").eq("association_id",aid).eq("statut","paye"),
       sb.from("amendes").select("membre_id,montant,date_infraction,date_paiement").eq("association_id",aid).eq("statut","paye"),
     ]).then(function(rs){
@@ -11492,7 +11492,7 @@ function payerStripe(type){
             <div class="form-group"><label>Montant tranche 3 (€)</label><input type="number" id="conf-t3-montant" value="10" step="0.5" min="0"></div>
             <div class="form-group"><label>Amende absence (€)</label><input type="number" id="conf-amende" value="15" min="0"></div>
             <div class="form-group"><label>Absences avant amende</label><input type="number" id="conf-nb-abs" value="3" min="1"></div>
-            <div class="form-group" style="grid-column:1/-1"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="conf-podium" style="width:16px;height:16px;accent-color:var(--accent)"> Afficher « 💸 Les Mécènes malgré eux » (top 3 retards &amp; amendes payés) dans l'espace membre</label></div>
+            <div class="form-group" style="grid-column:1/-1"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="conf-podium" style="width:16px;height:16px;accent-color:var(--accent)"> Afficher « 🏆 Les Sponsors Officiels de la Caisse » (top 3 retards &amp; amendes payés) dans l'espace membre</label></div>
             <div class="form-group"><label>Mois reset</label><select id="conf-mois-reset"><option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option><option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option><option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option><option value="10" selected>Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option></select></div>
             <div class="form-group"><label>Durée remboursement (mois)</label><input type="number" id="conf-duree-remb" value="3" min="1" max="24"></div>
           </div>
