@@ -8628,53 +8628,81 @@ async function saveReunEdit() {
       .eq('id', id);
     if (r0.error) throw new Error('Réunion: ' + r0.error.message);
 
-    // 2. Supprimer les anciennes sanctions auto (idempotent = safe si double-exec)
-    await sb.from('retards').delete().eq('reunion_id', id).eq('source', 'reunion');
-    await sb.from('amendes').delete().eq('reunion_id', id).eq('source', 'reunion');
+    // 2. Sanctions auto existantes de cette réunion. On ne repart PAS de zéro :
+    //    une sanction déjà payée n'est jamais effacée ni modifiée (sinon le
+    //    paiement disparaît et la caisse perd le montant — incident du 10/10/2026).
+    var exR = (await sb.from('retards').select('id,membre_id,montant,statut').eq('reunion_id', id).eq('source', 'reunion')).data || [];
+    var exA = (await sb.from('amendes').select('id,membre_id,montant,statut').eq('reunion_id', id).eq('source', 'reunion')).data || [];
+    var payesConserves = [];
 
-    // 3. Créer les retards
-    var retsData = retards_list
-      .filter(function(r) { return r.montant > 0; })
-      .map(function(r) {
-        return {
-          association_id: CA.id, membre_id: r.membreId,
-          motif: 'Retard reunion: ' + titre, montant: r.montant,
+    // 3. Retards : créer les nouveaux, ajuster les impayés, retirer les impayés plus en retard
+    var retsVoulus = retards_list.filter(function(r) { return r.montant > 0; });
+    var retsData = [];
+    for (var iR = 0; iR < retsVoulus.length; iR++) {
+      var rv = retsVoulus[iR];
+      var exr = exR.find(function(x) { return x.membre_id === rv.membreId; });
+      if (!exr) {
+        retsData.push({
+          association_id: CA.id, membre_id: rv.membreId,
+          motif: 'Retard reunion: ' + titre, montant: rv.montant,
           date_infraction: date, statut: 'impaye',
           source: 'reunion', reunion_id: id
-        };
-      });
+        });
+      } else if (exr.statut !== 'paye' && +exr.montant !== +rv.montant) {
+        var rU = await sb.from('retards').update({ montant: rv.montant }).eq('id', exr.id);
+        if (rU.error) throw new Error('Retards: ' + rU.error.message);
+      }
+    }
+    for (var jR = 0; jR < exR.length; jR++) {
+      var ex1 = exR[jR];
+      if (retsVoulus.find(function(x) { return x.membreId === ex1.membre_id; })) continue;
+      if (ex1.statut === 'paye') { payesConserves.push(mNm(ex1.membre_id) + ' (retard)'); continue; }
+      var rD = await sb.from('retards').delete().eq('id', ex1.id);
+      if (rD.error) throw new Error('Retards: ' + rD.error.message);
+    }
     if (retsData.length) {
       var r1 = await sb.from('retards').insert(retsData);
       if (r1.error) throw new Error('Retards: ' + r1.error.message);
-      // Emails APRÈS confirmation DB
+      // Emails APRÈS confirmation DB — uniquement pour les nouveaux retards
       retsData.forEach(function(r) {
         notifierEmailSanction(r.membre_id, 'Retard', r.montant, r.motif, sym);
       });
     }
 
-    // 4. Créer les amendes
+    // 4. Amendes d'absence : même principe
     var allR = (await sb.from('reunions')
       .select('id,absents,date_reunion')
       .eq('association_id', CA.id)).data || [];
     var nbS   = (CA && CA.nb_absences_avant_amende) || 3;
     var montAm = (CA && CA.montant_amende_absence) || 15;
-    var amData = [];
-    absents.forEach(function(mid) {
-      var nbAv = nbAbsSaison(mid, allR, id);
-      if (nbAv + 1 >= nbS) amData.push({
-        association_id: CA.id, membre_id: mid,
-        motif: 'Amende absence -- ' + titre, montant: montAm,
-        date_infraction: date, statut: 'impaye',
-        source: 'reunion', reunion_id: id
+    var amVoulus = absents.filter(function(mid) { return nbAbsSaison(mid, allR, id) + 1 >= nbS; });
+    var amData = amVoulus
+      .filter(function(mid) { return !exA.find(function(x) { return x.membre_id === mid; }); })
+      .map(function(mid) {
+        return {
+          association_id: CA.id, membre_id: mid,
+          motif: 'Amende absence -- ' + titre, montant: montAm,
+          date_infraction: date, statut: 'impaye',
+          source: 'reunion', reunion_id: id
+        };
       });
-    });
+    for (var jA = 0; jA < exA.length; jA++) {
+      var ex2 = exA[jA];
+      if (amVoulus.indexOf(ex2.membre_id) >= 0) continue;
+      if (ex2.statut === 'paye') { payesConserves.push(mNm(ex2.membre_id) + ' (amende absence)'); continue; }
+      var aD = await sb.from('amendes').delete().eq('id', ex2.id);
+      if (aD.error) throw new Error('Amendes: ' + aD.error.message);
+    }
     if (amData.length) {
       var r2 = await sb.from('amendes').insert(amData);
       if (r2.error) throw new Error('Amendes: ' + r2.error.message);
-      // Emails APRÈS confirmation DB
+      // Emails APRÈS confirmation DB — uniquement pour les nouvelles amendes
       amData.forEach(function(a) {
         notifierEmailSanction(a.membre_id, 'Amende', a.montant, a.motif, sym);
       });
+    }
+    if (payesConserves.length) {
+      toastWarn('Sanction(s) déjà payée(s) conservée(s) : ' + payesConserves.join(', ') + '. Pour l\'annuler, passez par Retards / Amendes.');
     }
 
     // 5. Succès — restaurer UI
@@ -8733,9 +8761,20 @@ function detReun(id) {
     }
     E('reun-modal-del').onclick = function() {
       if (!confirm('Supprimer cette reunion?')) return;
-      sb.from('retards').delete().eq('reunion_id', id).then(function() {
-        sb.from('amendes').delete().eq('reunion_id', id).then(function() {
-          sb.from('reunions').delete().eq('id', id).then(function() { closeModal('modal-reun'); rReuns(); });
+      // Les retards/amendes liés sont supprimés avec la réunion : prévenir s'il y en a de payés (ils sortent de la caisse)
+      Promise.all([
+        sb.from('retards').select('montant').eq('reunion_id', id).eq('statut', 'paye'),
+        sb.from('amendes').select('montant').eq('reunion_id', id).eq('statut', 'paye')
+      ]).then(function(rp) {
+        var payes = (rp[0].data || []).concat(rp[1].data || []);
+        if (payes.length) {
+          var tot = payes.reduce(function(s, x) { return s + (+x.montant); }, 0);
+          if (!confirm('⚠️ Cette réunion a ' + payes.length + ' retard(s)/amende(s) DÉJÀ PAYÉ(S) pour ' + fmt(tot) + ' ' + getSym() + '.\n\nIls seront supprimés aussi et ce montant sortira de la caisse.\n\nSupprimer quand même ?')) return;
+        }
+        sb.from('retards').delete().eq('reunion_id', id).then(function() {
+          sb.from('amendes').delete().eq('reunion_id', id).then(function() {
+            sb.from('reunions').delete().eq('id', id).then(function() { closeModal('modal-reun'); rReuns(); });
+          });
         });
       });
     };
