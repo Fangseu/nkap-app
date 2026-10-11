@@ -894,6 +894,40 @@ function dRemb(){return (CA&&CA.duree_remboursement)||3;}
 function mCol(id){var i=MC.findIndex(function(x){return x.id===id;});return COLS[Math.max(0,i)%COLS.length];}
 // Date d'un retard/amende : colonne réelle date_infraction (date_retard/date_amende = données démo)
 function dInfr(x){return (x&&(x.date_infraction||x.date_retard||x.date_amende))||"";}
+// ── « Les Mécènes malgré eux » : top des retards + amendes PAYÉS sur une saison ──
+function calcPodium(retsPayes,amsPayes,debSai,finSai){
+  var parM={};
+  function add(x,k){
+    var d=dInfr(x)||x.date_paiement||"";
+    if(!d||d<debSai||d>=finSai)return;
+    var p=parM[x.membre_id]||(parM[x.membre_id]={membre_id:x.membre_id,ret:0,am:0,tot:0});
+    p[k]+=(+x.montant||0);p.tot+=(+x.montant||0);
+  }
+  (retsPayes||[]).forEach(function(x){add(x,"ret");});
+  (amsPayes||[]).forEach(function(x){add(x,"am");});
+  return Object.keys(parM).map(function(k){return parM[k];}).filter(function(p){return p.tot>0;})
+    .sort(function(a,b){return b.tot-a.tot;});
+}
+function podiumH(classement,nomFn,fmtFn,saisonLbl,moiId){
+  var medailles=["🥇","🥈","🥉"];
+  var top=classement.slice(0,3);
+  var h='<div class="card" style="margin-bottom:16px"><div class="card-title">💸 Les Mécènes malgré eux</div>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">Saison '+saisonLbl+' — ceux qui ont le plus généreusement nourri la caisse en retards &amp; amendes 😄</div>';
+  if(!top.length)return h+'<div class="empty" style="padding:8px 0">Personne pour l\'instant… tout le monde est à l\'heure 👏</div></div>';
+  h+=top.map(function(p,i){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'+
+      '<span style="font-size:22px;width:28px;text-align:center">'+medailles[i]+'</span>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(nomFn(p.membre_id))+(p.membre_id===moiId?' <span class="badge badge-yellow">vous</span>':'')+'</div>'+
+      '<div style="font-size:11px;color:var(--text3)">⏰ '+fmtFn(p.ret)+' · ⚖️ '+fmtFn(p.am)+'</div></div>'+
+      '<span style="font-weight:700;color:var(--accent)">'+fmtFn(p.tot)+'</span></div>';
+  }).join("");
+  if(moiId){
+    var rang=classement.findIndex(function(p){return p.membre_id===moiId;});
+    h+='<div style="font-size:12px;color:var(--text2);margin-top:10px">'+(rang<0?'Vous : 0 cette saison — bravo, vous ne sponsorisez personne ! 🎉'
+      :rang>2?'Vous : '+(rang+1)+'ᵉ sur '+classement.length+' — '+fmtFn(classement[rang].tot):'')+'</div>';
+  }
+  return h+'</div>';
+}
 function mNm(id){var m=MC.find(function(x){return x.id===id;});return m?(m.prenom+" "+m.nom):"?";}
 function mIn(id){var m=MC.find(function(x){return x.id===id;});return m?(m.prenom[0]+m.nom[0]).toUpperCase():"??";}
 function avEl(id){
@@ -1981,8 +2015,8 @@ function rDash(){
       sb.from("amendes").select("montant").eq("association_id",aid).eq("statut","impaye"),
       sb.from("remboursements").select("membre_id,montant,type").eq("association_id",aid).eq("statut","en attente"),
       sb.from("projets_participants").select("membre_id,solde_restant").eq("association_id",aid),
-      sb.from("retards").select("montant,membre_id,date_paiement").eq("association_id",aid).eq("statut","paye"),
-      sb.from("amendes").select("montant,membre_id,date_paiement").eq("association_id",aid).eq("statut","paye"),
+      sb.from("retards").select("montant,membre_id,date_paiement,date_infraction").eq("association_id",aid).eq("statut","paye"),
+      sb.from("amendes").select("montant,membre_id,date_paiement,date_infraction").eq("association_id",aid).eq("statut","paye"),
       sb.from("sorties_caisse").select("montant,date_sortie").eq("association_id",aid),
       sb.from("reunions").select("id,titre,date_reunion,presents,absents,retards_list").eq("association_id",aid).lte("date_reunion",td()).order("date_reunion",{ascending:false}).limit(5),
       sb.from("virements_cotisation").select("montant").eq("association_id",aid),
@@ -2192,6 +2226,9 @@ function rDash(){
       var tb='<div style="margin-bottom:14px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">🎯 Ce mois-ci</div>'+tBenefListH(gagnantsCur)+'</div>'+
         '<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">📆 Mois prochain</div>'+tBenefListH(gagnantsNext)+'</div>';
       sH("dash-tontine-benef",tontinesAll.length?tb:'<div class="empty">Aucune tontine active</div>');
+      // 💸 Les Mécènes malgré eux — saison en cours
+      var saiP=saison();
+      sH("dash-podium",podiumH(calcPodium(retsPayes,amsPayes,ds2(saiP-1),ds2(saiP)),mNm,function(v){return fmt(v)+" "+sym;},(saiP-1)+"-"+saiP,null));
 
       // Caisses personnalisées — cartes KPI
       if(caissesList.length){
@@ -5717,6 +5754,9 @@ function chargeMembrePortal(ud){
       sb.from("tontines").select("id,statut").eq("association_id",aid),
       // Projets du membre — quote-part / solde restant
       sb.from("projets_participants").select("id,projet_id,quote_part,solde_restant,date_echeance,projets(nom,statut,date_limite)").eq("association_id",aid).eq("membre_id",mid),
+      // Mécènes malgré eux : retards/amendes PAYÉS de tous les membres (classement)
+      sb.from("retards").select("membre_id,montant,date_infraction,date_paiement").eq("association_id",aid).eq("statut","paye"),
+      sb.from("amendes").select("membre_id,montant,date_infraction,date_paiement").eq("association_id",aid).eq("statut","paye"),
     ]).then(function(rs){
       window._mbData={
         cots:rs[0].data||[],rets:rs[1].data||[],ams:rs[2].data||[],
@@ -5739,7 +5779,9 @@ function chargeMembrePortal(ud){
           return {id:c.id,nom:c.nom,couleur:c.couleur,solde:totE-totS};
         }),
         tontinesStatuts:rs[22].data||[],
-        projetsMembre:(rs[23].data||[]).filter(function(pp){return pp.projets&&pp.projets.statut!=="cloture";})
+        projetsMembre:(rs[23].data||[]).filter(function(pp){return pp.projets&&pp.projets.statut!=="cloture";}),
+        retsPayesAsso:rs[24].data||[],
+        amsPayesAsso:rs[25].data||[]
       };
       // Bénéficiaires tontine — ce mois / mois prochain (même calcul que le dashboard admin)
       (function(){
@@ -5874,6 +5916,7 @@ function renderMembrePortal(m,mid,aid){
     '<div class="stat-card" style="border-color:'+pctC+'"><div class="stat-label">Présence</div><div class="stat-val" style="color:'+pctC+'">'+pct+'%</div><div class="stat-sub">'+nbP+'/'+reuns.length+'</div></div>'+
     '<div class="stat-card '+(d.soldeCaisse>=0?"green":"red")+'"><div class="stat-label">Solde caisse</div><div class="stat-val" style="color:'+(d.soldeCaisse>=0?"var(--green)":"var(--red)")+'">'+fmtM(d.soldeCaisse)+'</div></div>'+
     '</div>'+
+    (CA&&CA.podium_membres?podiumH(calcPodium(d.retsPayesAsso,d.amsPayesAsso,debSai,finSai),mNm,fmtM,(saisonSel-1)+'-'+saisonSel,mid):'')+
     (projetsM.length?
       '<div class="card" style="margin-bottom:16px"><div class="card-title">🏗 Mes projets</div>'+
       '<div class="table-wrap"><table><thead><tr><th>Projet</th><th>Quote-part</th><th>Payé</th><th>Reste</th><th>Statut</th></tr></thead><tbody>'+
@@ -7983,6 +8026,7 @@ function loadConf(){
   if(E("conf-t3-montant"))E("conf-t3-montant").value=c.tranche3_montant||10;
   if(E("conf-amende"))E("conf-amende").value=c.montant_amende_absence||15;
   if(E("conf-nb-abs"))E("conf-nb-abs").value=c.nb_absences_avant_amende||3;
+  if(E("conf-podium"))E("conf-podium").checked=!!c.podium_membres;
   if(E("conf-mois-reset"))E("conf-mois-reset").value=c.mois_reset||10;
   if(E("conf-duree-remb"))E("conf-duree-remb").value=c.duree_remboursement||3;
   if(E("conf-couleur"))E("conf-couleur").value=c.couleur_accent||"var(--accent)";
@@ -8072,7 +8116,8 @@ function saveConf(){
     cycle_duree:+((E("conf-cycle-duree")||{}).value||12),
     taux_retard:+((E("conf-taux-retard")||{}).value||2),
     base_retard:(E("conf-base-retard")||{}).value||"restant",
-    grace_retard:+((E("conf-grace-retard")||{}).value||7)
+    grace_retard:+((E("conf-grace-retard")||{}).value||7),
+    podium_membres:!!(E("conf-podium")||{}).checked
   };
   var logoEl=E("conf-logo-preview-data");if(logoEl&&logoEl.value)data.logo_url=logoEl.value;
   sb.from("associations").update(data).eq("id",CA.id).then(function(r){
@@ -10794,6 +10839,7 @@ function payerStripe(type){
       <div style="margin-top:4px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
         <div class="card"><div class="card-title">Fond adhésion par membre</div><div id="dash-fonds"></div></div>
         <div class="card"><div class="card-title">🎯 Tontine — bénéficiaires</div><div id="dash-tontine-benef"></div></div>
+        <div id="dash-podium"></div>
       </div>
     </div>
 
@@ -11446,6 +11492,7 @@ function payerStripe(type){
             <div class="form-group"><label>Montant tranche 3 (€)</label><input type="number" id="conf-t3-montant" value="10" step="0.5" min="0"></div>
             <div class="form-group"><label>Amende absence (€)</label><input type="number" id="conf-amende" value="15" min="0"></div>
             <div class="form-group"><label>Absences avant amende</label><input type="number" id="conf-nb-abs" value="3" min="1"></div>
+            <div class="form-group" style="grid-column:1/-1"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="conf-podium" style="width:16px;height:16px;accent-color:var(--accent)"> Afficher « 💸 Les Mécènes malgré eux » (top 3 retards &amp; amendes payés) dans l'espace membre</label></div>
             <div class="form-group"><label>Mois reset</label><select id="conf-mois-reset"><option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option><option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option><option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option><option value="10" selected>Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option></select></div>
             <div class="form-group"><label>Durée remboursement (mois)</label><input type="number" id="conf-duree-remb" value="3" min="1" max="24"></div>
           </div>
