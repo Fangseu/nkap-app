@@ -892,6 +892,8 @@ function saisonDe(dateStr){var yr=new Date(dateStr).getFullYear();return dateStr
 function debut(){return ds2(saison()-1);}
 function dRemb(){return (CA&&CA.duree_remboursement)||3;}
 function mCol(id){var i=MC.findIndex(function(x){return x.id===id;});return COLS[Math.max(0,i)%COLS.length];}
+// Date d'un retard/amende : colonne réelle date_infraction (date_retard/date_amende = données démo)
+function dInfr(x){return (x&&(x.date_infraction||x.date_retard||x.date_amende))||"";}
 function mNm(id){var m=MC.find(function(x){return x.id===id;});return m?(m.prenom+" "+m.nom):"?";}
 function mIn(id){var m=MC.find(function(x){return x.id===id;});return m?(m.prenom[0]+m.nom[0]).toUpperCase():"??";}
 function avEl(id){
@@ -5787,16 +5789,16 @@ function renderMembrePortal(m,mid,aid){
 
   // Filtrer les données selon la saison sélectionnée
   var cots=d.cots.filter(function(c){return c.mois&&c.mois>=debSai.slice(0,7)&&c.mois<finSai.slice(0,7);});
-  var rets=d.rets.filter(function(r){return r.date_retard&&r.date_retard>=debSai&&r.date_retard<finSai;});
-  var ams=d.ams.filter(function(a){return a.date_amende&&a.date_amende>=debSai&&a.date_amende<finSai;});
+  var rets=d.rets.filter(function(r){return dInfr(r)&&dInfr(r)>=debSai&&dInfr(r)<finSai;});
+  var ams=d.ams.filter(function(a){return dInfr(a)&&dInfr(a)>=debSai&&dInfr(a)<finSai;});
   var reuns=d.reuns.filter(function(r){return r.date_reunion&&r.date_reunion>=debSai&&r.date_reunion<finSai&&r.date_reunion<=td();});
   var rembs=d.rembs; // remboursements : tous (pas de filtre saison)
   var donsB=d.donsB.filter(function(x){return x.date_don&&x.date_don>=debSai&&x.date_don<finSai;});
   var pretsB=d.pretsB.filter(function(x){return x.date_pret&&x.date_pret>=debSai&&x.date_pret<finSai;});
 
   var totC=cots.filter(function(c){return c.statut==="paye";}).reduce(function(s,c){return s+(+c.montant);},0);
-  var retImp=rets.filter(function(r){return r.statut==="impaye";}).reduce(function(s,r){return s+(+r.montant);},0);
-  var amImp=ams.filter(function(a){return a.statut==="impaye";}).reduce(function(s,a){return s+(+a.montant);},0);
+  var retImp=d.rets.filter(function(r){return r.statut==="impaye";}).reduce(function(s,r){return s+(+r.montant);},0);
+  var amImp=d.ams.filter(function(a){return a.statut==="impaye";}).reduce(function(s,a){return s+(+a.montant);},0);
   var rembsEn=rembs.filter(function(r){return r.statut==="en attente";});
   var rembTot=rembsEn.reduce(function(s,r){return s+(+r.montant);},0);
   var nbP=reuns.filter(function(r){return (r.presents||[]).indexOf(mid)>=0;}).length;
@@ -5811,8 +5813,8 @@ function renderMembrePortal(m,mid,aid){
   var hasTontine=(d.tCots&&d.tCots.length)||(d.tTirage&&d.tTirage.length)||(d.tEchanges&&d.tEchanges.length);
   var bilansSaison=d.bilansSaison||[];
   var hasBilans=bilansSaison.length>0;
-  var retImpNb=rets.filter(function(r){return r.statut==="impaye";}).length;
-  var amImpNb=ams.filter(function(a){return a.statut==="impaye";}).length;
+  var retImpNb=d.rets.filter(function(r){return r.statut==="impaye";}).length;
+  var amImpNb=d.ams.filter(function(a){return a.statut==="impaye";}).length;
   var nbAlerts=retImpNb+amImpNb+(rembsEn.length?1:0);
   var nbEchanges=(d.tEchanges||[]).length;
   var votes=d.votes||[];
@@ -5920,8 +5922,8 @@ function renderMembrePortal(m,mid,aid){
     '<div class="card" style="margin-bottom:14px"><div class="card-title">⚠️ Retards & Amendes</div>'+
     (function(){
       var items=[].concat(
-        rets.map(function(r){return Object.assign({},r,{_t:"Retard",_table:"retards",_date:r.date_retard});}),
-        ams.map(function(a){return Object.assign({},a,{_t:"Amende",_table:"amendes",_date:a.date_amende});})
+        rets.map(function(r){return Object.assign({},r,{_t:"Retard",_table:"retards",_date:dInfr(r)});}),
+        ams.map(function(a){return Object.assign({},a,{_t:"Amende",_table:"amendes",_date:dInfr(a)});})
       ).sort(function(a,b){return (b._date||"").localeCompare(a._date||"");});
       if(!items.length)return '<p style="color:var(--text3);font-size:13px">✓ Aucun retard ni amende cette saison</p>';
       return items.map(function(x){
@@ -6251,8 +6253,8 @@ function renderMembrePortal(m,mid,aid){
     '<div class="card"><div class="card-title">Retards & Amendes</div>'+
     (function(){
       var items=[].concat(
-        rets.map(function(r){return Object.assign({},r,{_t:"Retard",_table:"retards",_date:r.date_retard});}),
-        ams.map(function(a){return Object.assign({},a,{_t:"Amende",_table:"amendes",_date:a.date_amende});})
+        rets.map(function(r){return Object.assign({},r,{_t:"Retard",_table:"retards",_date:dInfr(r)});}),
+        ams.map(function(a){return Object.assign({},a,{_t:"Amende",_table:"amendes",_date:dInfr(a)});})
       ).sort(function(a,b){return (b._date||"").localeCompare(a._date||"");});
       if(!items.length)return '<p style="color:var(--text3);font-size:13px">Aucun retard ni amende cette saison</p>';
       return items.map(function(x){
@@ -6748,8 +6750,8 @@ function exportMembrePDF(){
   var saisonSel=window._mbSaisonSel||saison();
   var sym=(CA&&CA.devise)?({EUR:"€",USD:"$",GBP:"£",XAF:"FCFA",XOF:"CFA"}[CA.devise]||CA.devise):"€";
   var cots=d.cots.filter(function(c){return c.mois&&c.mois>=debSai.slice(0,7)&&c.mois<finSai.slice(0,7);});
-  var rets=d.rets.filter(function(r){return r.date_retard&&r.date_retard>=debSai&&r.date_retard<finSai;});
-  var ams=d.ams.filter(function(a){return a.date_amende&&a.date_amende>=debSai&&a.date_amende<finSai;});
+  var rets=d.rets.filter(function(r){return dInfr(r)&&dInfr(r)>=debSai&&dInfr(r)<finSai;});
+  var ams=d.ams.filter(function(a){return dInfr(a)&&dInfr(a)>=debSai&&dInfr(a)<finSai;});
   var reuns=d.reuns.filter(function(r){return r.date_reunion>=debSai&&r.date_reunion<finSai&&r.date_reunion<=td();});
   var nbP=reuns.filter(function(r){return (r.presents||[]).indexOf(window._mbMid)>=0;}).length;
   var pct=reuns.length?Math.round(nbP/reuns.length*100):100;
@@ -6806,8 +6808,8 @@ function exportMembrePDF(){
     ((rets.length||ams.length)?
     '<div class="section"><div class="section-title">Retards & Amendes</div>'+
     '<table><thead><tr><th>Type</th><th>Motif</th><th>Montant</th><th>Statut</th><th>Date</th></tr></thead><tbody>'+
-    [].concat(rets.map(function(r){return {_t:"Retard",motif:r.motif,montant:r.montant,statut:r.statut,date:r.date_retard};}),
-             ams.map(function(a){return {_t:"Amende",motif:a.motif,montant:a.montant,statut:a.statut,date:a.date_amende};}))
+    [].concat(rets.map(function(r){return {_t:"Retard",motif:r.motif,montant:r.montant,statut:r.statut,date:dInfr(r)};}),
+             ams.map(function(a){return {_t:"Amende",motif:a.motif,montant:a.montant,statut:a.statut,date:dInfr(a)};}))
     .map(function(x){return '<tr><td>'+x._t+'</td><td>'+(x.motif||"—")+'</td><td>'+fmtM(x.montant)+'</td>'+
       '<td><span class="badge '+(x.statut==="paye"?"green":"red")+'">'+(x.statut==="paye"?"Payé":"Impayé")+'</span></td>'+
       '<td>'+fdD(x.date||"")+'</td></tr>';}).join("")+
@@ -6977,7 +6979,7 @@ function buildDeclZone(mid, aid, sym, cots, tCots){
     if(rets.length){
       opts+='<optgroup label="Retards impayés">';
       rets.forEach(function(r){
-        opts+='<option value="retard:'+r.id+':'+r.montant+'">Retard — '+(r.motif||r.date_retard||"")+" — "+r.montant+' '+sym+'</option>';
+        opts+='<option value="retard:'+r.id+':'+r.montant+'">Retard — '+(r.motif||fdD(dInfr(r)))+" — "+r.montant+' '+sym+'</option>';
       });
       opts+='</optgroup>';
     }
@@ -6986,7 +6988,7 @@ function buildDeclZone(mid, aid, sym, cots, tCots){
     if(ams.length){
       opts+='<optgroup label="Amendes impayées">';
       ams.forEach(function(a){
-        opts+='<option value="amende:'+a.id+':'+a.montant+'">Amende — '+(a.motif||a.date_amende||"")+" — "+a.montant+' '+sym+'</option>';
+        opts+='<option value="amende:'+a.id+':'+a.montant+'">Amende — '+(a.motif||fdD(dInfr(a)))+" — "+a.montant+' '+sym+'</option>';
       });
       opts+='</optgroup>';
     }
