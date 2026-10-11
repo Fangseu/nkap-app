@@ -6523,6 +6523,8 @@ function renderMembrePortal(m,mid,aid){
     });
   });
 
+  window._mbDernierChargement=Date.now();
+
   // ── Délégation d'événements ──────────────────────────────────
   var mbContent=E("mb-content");
   if(mbContent&&!mbContent._listenerSet){
@@ -12179,6 +12181,7 @@ function payerStripe(type){
       </div>
       <button id="btn-retour-admin" onclick="retourAdmin()" style="display:none;background:var(--accent);border:none;color:#fff;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600">← Espace admin</button>
       <button onclick="ouvrirCreerAssociation()" style="background:none;border:1px solid rgba(26,158,122,.3);color:var(--accent);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600">➕ Nouvelle association</button>
+      <button onclick="rafraichirEspaceMembre()" title="Actualiser mes données" style="background:none;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">🔄 Actualiser</button>
       <button onclick="doLogoutMembre()" style="background:none;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(244,100,95,.4)'" onmouseout="this.style.color='var(--text2)';this.style.borderColor='var(--border)'">Déconnexion</button>
     </div>
   </div>
@@ -13314,6 +13317,22 @@ function ouvrirEchangeMembre(slotId, tontId, moisCal, membreId, aid){
   ouvrirEchange(tontId, slotId, membreId, '', 'en_negociation', true);
 }
 
+
+// ── Actualiser l'espace membre : bouton 🔄 + automatiquement au retour sur l'app (> 2 min) ──
+function _mbEspaceVisible(){var c=E("mb-content");return !!(window._mbAid&&c&&c.offsetParent!==null);}
+function rafraichirEspaceMembre(){
+  if(!_mbEspaceVisible()||window._mbRechargeEnCours)return;
+  window._mbRechargeEnCours=true;
+  var y=window.scrollY;
+  Promise.resolve(chargeMembrePortal(window._mbM||{email:(CU&&CU.email)||""})).then(function(){
+    window._mbRechargeEnCours=false;
+    window.scrollTo(0,y);
+  },function(){window._mbRechargeEnCours=false;});
+}
+document.addEventListener("visibilitychange",function(){
+  if(document.visibilityState!=="visible"||!_mbEspaceVisible())return;
+  if(Date.now()-(window._mbDernierChargement||0)>2*60*1000)rafraichirEspaceMembre();
+});
 
 async function annulerEchangeMembre(echangeId){
   if(!confirm('Annuler cette demande d\'échange ?'))return;
