@@ -1828,9 +1828,11 @@ function doLogout(){
   window._DEMO_MODE=false;
   var b=E("demo-banner");if(b)b.remove();
   sb.auth.signOut().then(function(){
-    window.location.reload();
+    retourAccueil();
   });
 }
+// Après une déconnexion : retour à la page d'accueil publique (sans « #app », qui rouvrirait l'écran de connexion)
+function retourAccueil(){window.location.replace(window.location.pathname||'/');}
 
 // ================================================================
 // MODE DÉMO — Association fictive complète
@@ -6870,7 +6872,7 @@ function rejeterVARetrait(demandeId){
   });
 }
 
-function doLogoutMembre(){sb.auth.signOut().then(function(){window.location.reload();});}
+function doLogoutMembre(){sb.auth.signOut().then(function(){retourAccueil();});}
 
 // ================================================================
 // EXPORT PDF FICHE MEMBRE
@@ -13111,7 +13113,7 @@ async function executerSuppressionCompte(btn){
   // Déconnecter et supprimer le compte auth
   await sb.auth.signOut();
   toastOk('✅ Votre compte et toutes les données ont été supprimés.');
-  window.location.reload();
+  setTimeout(retourAccueil,1200);
 }
 
 function demanderMdpAdminPourCles(){
