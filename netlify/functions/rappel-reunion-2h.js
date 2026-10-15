@@ -87,10 +87,11 @@ exports.handler = async function () {
     try {
       if (!String(r.lieu || "").trim()) continue;
       if (!assocCache[r.association_id]) {
-        const a = await sbGet("associations", `id=eq.${r.association_id}&select=id,nom,config_recurrence`);
+        const a = await sbGet("associations", `id=eq.${r.association_id}&select=id,nom,slug,config_recurrence`);
         assocCache[r.association_id] = a[0] || {};
       }
       const assoc = assocCache[r.association_id];
+      if (String(assoc.slug || "").startsWith("demo-nkap")) continue; // association de démonstration : pas de rappel
       const conf = assoc.config_recurrence || {};
       const heure = heureReunion(r, conf);
       const reste = minutes(heure) - nowMin;

@@ -294,7 +294,8 @@ exports.handler = async function () {
     return { statusCode: 500 };
   }
 
-  const associations = await sbGet("associations", "select=id,nom,devise,config_recurrence");
+  // L'association de démonstration (slug « demo-nkap… ») ne reçoit aucun rappel
+  const associations = await sbGet("associations", "select=id,nom,devise,config_recurrence&slug=not.like.demo-nkap*");
 
   for (const assoc of associations) {
     try {
