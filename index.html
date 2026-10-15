@@ -949,6 +949,7 @@ function E(id){return document.getElementById(id);}
 function sH(id,h){var e=E(id);if(e)e.innerHTML=h;}
 function gV(id){var e=E(id);return e?e.value.trim():"";}
 function showSS(name){
+  var lp=E("landing-page");if(lp)lp.style.display="none";
   E("screen-setup").classList.add("hidden");
   E("screen-auth").classList.add("hidden");
   E("screen-app").style.display="none";
@@ -956,10 +957,7 @@ function showSS(name){
   if(name==="setup")E("screen-setup").classList.remove("hidden");
   if(name==="auth")E("screen-auth").classList.remove("hidden");
   if(name==="membre")E("screen-membre").style.display="block";
-  if(name==="app"){
-    E("screen-app").style.display="block";
-    var lp=E("landing-page");if(lp)lp.style.display="none";
-  }
+  if(name==="app")E("screen-app").style.display="block";
 }
 function openMO(id){E(id).classList.add("open");}
 function closeMO(id){E(id).classList.remove("open");}
@@ -1349,6 +1347,10 @@ function initSB(url,key){
     sb=window.supabase.createClient(url,key);
     sb.auth.getSession().then(function(res){
       if(res.data&&res.data.session){CU=res.data.session.user;chargeD();}
+      else if(window._lpLogin){
+        // Connexion lancée depuis la page d'accueil : on reste sur l'accueil (pas d'ancien écran de connexion)
+        var c=window._lpLogin;window._lpLogin=null;lpSignIn(c);
+      }
       else{showSS("auth");}
     }).catch(function(){showSS("setup");});
     sb.auth.onAuthStateChange(function(event,session){
@@ -10466,11 +10468,21 @@ function lpConnexion(){
   var er=document.getElementById('lp-err');
   if(!em||!pw){er.textContent='Indiquez votre email et votre mot de passe.';er.style.display='block';return;}
   er.style.display='none';
-  lpVersApp(function(){
-    var e=document.getElementById('li-email'),p=document.getElementById('li-pwd');
-    if(e)e.value=em;if(p)p.value=pw;
-    if(typeof doLogin==='function')doLogin();
-  });
+  var bt=document.querySelector('#lp-login-form .lp-go');if(bt){bt.disabled=true;bt.textContent='Connexion…';}
+  window.location.hash='app';
+  if(window.sb&&window.sb.auth){lpSignIn({email:em,pwd:pw});return;}
+  window._lpLogin={email:em,pwd:pw};
+  initSB(SB_URL,SB_KEY);
+}
+function lpSignIn(c){
+  sb.auth.signInWithPassword({email:c.email,password:c.pwd}).then(function(r){
+    if(r.error)lpEchec(r.error.message.indexOf("Invalid")>=0?"Email ou mot de passe incorrect.":r.error.message);
+  }).catch(function(){lpEchec("Connexion impossible. Vérifiez votre réseau.");});
+}
+function lpEchec(msg){
+  var bt=document.querySelector('#lp-login-form .lp-go');if(bt){bt.disabled=false;bt.textContent='Se connecter';}
+  var er=document.getElementById('lp-err');if(er){er.textContent=msg;er.style.display='block';}
+  try{history.replaceState(null,'',window.location.pathname);}catch(e){}
 }
 function lpFocusLogin(){
   window.scrollTo({top:0,behavior:'smooth'});
