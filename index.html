@@ -978,7 +978,7 @@ function G(p){
   document.querySelectorAll(".page").forEach(function(x){x.classList.remove("active");});
   document.querySelectorAll(".nav-item,.ni").forEach(function(x){x.classList.remove("active");});
   var pg=E("page-"+p);if(pg)pg.classList.add("active");
-  var TITLES={dashboard:"Tableau de bord",membres:"Membres","reunions-liste":"Reunions","reunions-suivi":"Suivi absences","reunions-nouvelle":"Nouvelle reunion","votes-liste":"Votes","votes-nouvelle":"Nouveau vote","cotisations-liste":"Cotisations","cotisations-nouvelle":"Nouvelle cotisation","adhesion-fonds":"Fonds Adhesion","adhesion-paiements":"Paiements Adhesion","adhesion-nouveau":"Nouveau paiement","retards-liste":"Retards","retards-nouveau":"Nouveau retard","amendes-liste":"Amendes","amendes-nouvelle":"Nouvelle amende","dons-liste":"Dons","dons-remboursements":"Remboursements Dons","dons-nouveau":"Nouveau don","prets-liste":"Prets","prets-remboursements":"Remboursements Prets","prets-nouveau":"Nouveau pret","pret-interet-liste":"Prets Interets","pret-interet-remboursements":"Remboursements PI","pret-interet-nouveau":"Nouveau pret interets","projets-liste":"Projets","projets-remboursements":"Remboursements Projets","projets-nouveau":"Nouveau Projet","fond-caisse-journal":"Fond Caisse","fond-caisse-sortie":"Sortie Caisse","fond-cotisation-journal":"Fond Cotisation","fond-cotisation-virement":"Virement Cotisation",comptabilite:"Comptabilite",alertes:"Alertes","mon-compte":"Mon Compte",documents:"Documents",configuration:"Configuration",superadmin:"Super Admin","sa-dashboard":"SA Dashboard","sa-associations":"SA Associations","sa-creer":"SA Creer","sa-modifier":"SA Modifier","sa-alertes":"SA Alertes","vente-fond":"Vente Argent","vente-depot":"Nouveau depot","vente-prets":"Vente Prets","vente-pret-new":"Nouveau pret VA","vente-bilan":"Bilan annuel","vente-retrait":"Retrait fond",tontine:"Tontine","tontine-calendrier":"Calendrier tontine","tontine-cotisations":"Cotisations tontine","caisses-liste":"Caisses perso.","caisses-nouvelle":"Nouvelle caisse","caisse-detail":"Caisse","caisse-entree":"Entrée caisse","caisse-sortie":"Sortie caisse","assistant-ia":"Assistant IA"};
+  var TITLES={dashboard:"Tableau de bord",membres:"Membres","reunions-liste":"Reunions","reunions-suivi":"Suivi absences","reunions-nouvelle":"Nouvelle reunion","votes-liste":"Votes","votes-nouvelle":"Nouveau vote","cotisations-liste":"Cotisations","cotisations-nouvelle":"Nouvelle cotisation","adhesion-fonds":"Fonds Adhesion","adhesion-paiements":"Paiements Adhesion","adhesion-nouveau":"Nouveau paiement","retards-liste":"Retards","retards-nouveau":"Nouveau retard","amendes-liste":"Amendes","amendes-nouvelle":"Nouvelle amende","dons-liste":"Dons","dons-remboursements":"Remboursements Dons","dons-nouveau":"Nouveau don","prets-liste":"Prets","prets-remboursements":"Remboursements Prets","prets-nouveau":"Nouveau pret","pret-interet-liste":"Prets Interets","pret-interet-remboursements":"Remboursements PI","pret-interet-nouveau":"Nouveau pret interets","projets-liste":"Projets","projets-remboursements":"Remboursements Projets","projets-nouveau":"Nouveau Projet","fond-caisse-journal":"Fond Caisse","fond-caisse-sortie":"Sortie Caisse","fond-cotisation-journal":"Fond Cotisation","fond-cotisation-virement":"Virement Cotisation",comptabilite:"Comptabilite",alertes:"Alertes","mon-compte":"Mon Compte",documents:"Documents",configuration:"Configuration",superadmin:"Super Admin","sa-dashboard":"SA Dashboard","sa-associations":"SA Associations","sa-creer":"SA Creer","sa-modifier":"SA Modifier","sa-alertes":"SA Alertes","vente-fond":"Vente Argent","vente-depot":"Nouveau depot","vente-prets":"Vente Prets","vente-pret-new":"Nouveau pret VA","vente-bilan":"Bilan annuel","vente-retrait":"Retrait fond",tontine:"Tontine","tontine-calendrier":"Calendrier tontine","tontine-cotisations":"Cotisations tontine","caisses-liste":"Caisses perso.","caisses-nouvelle":"Nouvelle caisse","caisse-detail":"Caisse","caisse-entree":"Entrée caisse","caisse-sortie":"Sortie caisse","assistant-ia":"Assistant IA",guide:"Guide vidéo"};
   var te=E("page-title");if(te)te.textContent=TITLES[p]||p;
   document.querySelectorAll(".nav-item,.ni").forEach(function(n){var oc=n.getAttribute("onclick")||"";if(oc==="G('"+p+"')"||oc==='G("'+p+'")')n.classList.add("active");});
   closeSB();
@@ -1032,6 +1032,7 @@ function G(p){
   var _savedKey=lsGet('nkap-openai-key','');
   if(_anthEl&&_savedKey)_anthEl.value=_savedKey;loadConf();initAccesMembres();initMultiAdmin();initSignataires();chargerRappelPushAdmin();initRecurrence();checkSuperAdmin();}
   else if(p==="assistant-ia"){switchIATab('chat');}
+  else if(p==="guide"){rGuide();}
   else if(p==="superadmin")rSuperAdmin();
   else if(p==="sa-dashboard")rSADashboard();
   else if(p==="sa-associations")rSAAssociations();
@@ -5914,6 +5915,7 @@ function renderMembrePortal(m,mid,aid){
     (hasTontine?_mbTabBtn('tontine','🎰','Tontine',nbEchanges):'')+
     _mbTabBtn('va','💰','Vente Argent',0)+
     (hasBilans?_mbTabBtn('bilans','📊','Bilans',0):'')+
+    _mbTabBtn('aide','🎬','Aide',0)+
     '</div>'+
 
     // ── ONGLET : ACCUEIL ─────────────────────────────────────────
@@ -6251,6 +6253,12 @@ function renderMembrePortal(m,mid,aid){
     // ── ONGLET : VENTE ARGENT ─────────────────────────────────────
     '<div id="mbt-va" class="mb-tab-panel" style="display:none">'+
     '<div id="mb-va-zone"></div>'+
+    '</div>'+
+
+    // ── ONGLET : AIDE (guide vidéo) ───────────────────────────────
+    '<div id="mbt-aide" class="mb-tab-panel" style="display:none">'+
+    '<div class="card" style="margin-bottom:14px"><div style="font-size:13px;color:var(--text2)">🎬 Des vidéos d’une minute pour utiliser ton espace membre.</div></div>'+
+    guideHtml(['membre'])+
     '</div>'+
 
     // ── ONGLET : BILANS DE SAISON ──────────────────────────────────
@@ -6600,6 +6608,68 @@ function filtrerMbTontine(){
     var s=card.getAttribute('data-saison');
     card.style.display=(val==='toutes'||!s||s===val)?'':'none';
   });
+}
+
+// ================================================================
+// GUIDE VIDÉO — tutoriels filmés sur l'association démo (fichiers videos/guide/<clé>.mp4 + .jpg)
+// ================================================================
+var GUIDE_VIDEOS=[
+  {k:'m1',f:'membre',t:'Me connecter',d:'Email, mot de passe, mot de passe oublié'},
+  {k:'m2',f:'membre',t:'Mon tableau de bord',d:'Mes comptes, la prochaine réunion, mes paiements'},
+  {k:'m3',f:'membre',t:'Déclarer un paiement',d:'Prévenir le trésorier en quelques secondes'},
+  {k:'m4',f:'membre',t:'Ma tontine',d:'Mon mois de gain et mes cotisations'},
+  {k:'d1',f:'membre',t:'« Comment je paie ? »',d:'Laure et Serge en conversation',dlg:true},
+  {k:'s1',f:'secretaire',t:'Enregistrer une réunion',d:'Lieu, appel, retards et absents'},
+  {k:'s2',f:'secretaire',t:'Lancer un vote',d:'Question, majorité, date limite'},
+  {k:'s4',f:'secretaire',t:'Lancer un cycle de tontine',d:'Parts, tirage, calendrier'},
+  {k:'s5',f:'secretaire',t:'Créer un projet',d:'Participants, part de chacun, caisse dédiée'},
+  {k:'d3',f:'secretaire',t:'« Tu as noté les retards ? »',d:'Jean-Paul et Mireille en conversation',dlg:true},
+  {k:'t1',f:'tresorier',t:'Valider un paiement',d:'Les déclarations des membres'},
+  {k:'t2',f:'tresorier',t:'La caisse et ses dépenses',d:'Journal, sorties, solde'},
+  {k:'t3',f:'tresorier',t:"La caisse d'un projet",d:'Entrées et sorties du projet'},
+  {k:'d2',f:'tresorier',t:'« J\'ai bien reçu ton paiement »',d:'Jean-Paul et Serge en conversation',dlg:true},
+  {k:'p2',f:'president',t:'Relire et valider le PV',d:'Le procès-verbal de chaque réunion'}
+];
+var GUIDE_FONCTIONS={membre:'👤 Membre',secretaire:'🗂️ Secrétaire',tresorier:'💰 Trésorier',president:'👑 Président'};
+// Liste de vidéos (lecture à la demande : rien n'est téléchargé avant d'appuyer sur ▶)
+function guideHtml(fonctions){
+  return fonctions.map(function(fn){
+    var vids=GUIDE_VIDEOS.filter(function(v){return v.f===fn;});
+    if(!vids.length)return '';
+    return '<div style="margin-bottom:22px"><div style="font-weight:700;font-size:15px;color:var(--text);margin-bottom:10px">'+GUIDE_FONCTIONS[fn]+'</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">'+
+      vids.map(function(v){
+        return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden">'+
+          '<video controls playsinline preload="none" poster="videos/guide/'+v.k+'.jpg" src="videos/guide/'+v.k+'.mp4" style="display:block;width:100%;aspect-ratio:9/16;background:#F6EFE3"></video>'+
+          '<div style="padding:8px 10px"><div style="font-size:13px;font-weight:700;color:var(--text)">'+(v.dlg?'💬 ':'')+v.t+'</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+v.d+'</div></div></div>';
+      }).join('')+'</div></div>';
+  }).join('');
+}
+// Une seule vidéo à la fois
+document.addEventListener('play',function(e){
+  if(e.target&&e.target.tagName==='VIDEO')document.querySelectorAll('video').forEach(function(v){if(v!==e.target)v.pause();});
+},true);
+// Fenêtre « Comment ça marche ? » (écran de connexion) : vidéos des membres
+function ouvrirGuideModal(){
+  var old=E('guide-modal');if(old)old.remove();
+  var m=document.createElement('div');m.id='guide-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;overflow-y:auto;padding:20px 14px';
+  m.innerHTML='<div style="background:var(--bg);border-radius:16px;max-width:720px;margin:0 auto;padding:20px">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">'+
+    '<div style="font-size:18px;font-weight:700;color:var(--text)">🎬 Comment ça marche ?</div>'+
+    '<button onclick="fermerGuideModal()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--text2)">✕ Fermer</button></div>'+
+    '<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Des vidéos d’une minute pour bien démarrer avec Nkap.</div>'+
+    guideHtml(['membre'])+'</div>';
+  m.addEventListener('click',function(e){if(e.target===m)fermerGuideModal();});
+  document.body.appendChild(m);
+}
+function fermerGuideModal(){var m=E('guide-modal');if(m){m.querySelectorAll('video').forEach(function(v){v.pause();});m.remove();}}
+// Page « Guide vidéo » de l'espace bureau : les vidéos de sa fonction (+ membre) ; le président et l'administrateur voient tout
+function rGuide(){
+  var role=window._roleInBureau;
+  var fns=(!role||role==='president'||window._isSuperAdmin)?['president','tresorier','secretaire','membre']:[role,'membre'];
+  sH('guide-content','<div class="card" style="margin-bottom:16px"><div style="font-size:13px;color:var(--text2)">Des vidéos d’une minute, filmées dans l’application, pour chaque tâche'+(role&&role!=='president'?' de votre fonction':' du bureau et des membres')+'.</div></div>'+guideHtml(fns));
 }
 
 function switchMbTab(tabId,noSave){
@@ -7805,7 +7875,7 @@ var PERMS_BUREAU = {
     'caisses-liste','caisses-nouvelle','caisse-detail','caisse-entree','caisse-sortie',
     'vente-fond','vente-depot','vente-retrait','vente-prets','vente-pret-new','vente-bilan',
     'votes-liste','votes-nouvelle',
-    'comptabilite','alertes','mon-compte','documents','assistant-ia'
+    'comptabilite','alertes','mon-compte','documents','assistant-ia','guide'
   ],
   secretaire: [
     'dashboard','membres',
@@ -7816,7 +7886,7 @@ var PERMS_BUREAU = {
     'dons-nouveau',
     'projets-nouveau',
     'tontine','tontine-calendrier','tontine-cotisations',
-    'alertes','mon-compte','documents','assistant-ia'
+    'alertes','mon-compte','documents','assistant-ia','guide'
   ]
 };
 // Note: la création et la validation des votes sont ouvertes à tout compte admin
@@ -10646,6 +10716,7 @@ function payerStripe(type){
       </div>
       <button class="btn btn-primary" id="btn-li" onclick="doLogin()">Se connecter</button>
       <div style="text-align:center;margin-top:12px"><a href="#" onclick="dofPwd()" style="font-size:13px;color:var(--text3)">Mot de passe oublié ?</a></div>
+      <button type="button" onclick="ouvrirGuideModal()" style="display:block;width:100%;margin-top:14px;background:none;border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer">🎬 Comment ça marche ? <span style="font-weight:400;color:var(--text3)">— les vidéos</span></button>
     </div>
 
     <!-- CRÉATION DE COMPTE EMAIL -->
@@ -10710,6 +10781,7 @@ function payerStripe(type){
       <div class="nav-label">Principal</div>
       <div class="nav-item ni active" onclick="G('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Tableau de bord</div>
       <div class="nav-item ni" onclick="G('membres')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Membres</div>
+      <div class="nav-item ni" onclick="G('guide')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10 9 15 12 10 15 10 9"/></svg>Guide vidéo</div>
     </div>
 
     <div class="nav-section">
@@ -11869,6 +11941,8 @@ function payerStripe(type){
     </div>
 
     <!-- ============= PAGE ASSISTANT IA ============= -->
+    <div class="page" id="page-guide"><div id="guide-content"></div></div>
+
     <div class="page" id="page-assistant-ia">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
         <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🤖</div>

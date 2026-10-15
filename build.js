@@ -56,4 +56,8 @@ if (fs.existsSync(promoSrc)) {
   }
 }
 
+// Guide vidéo (tutoriels de l'application) : videos/guide/<clé>.mp4 + .jpg, copiés tels quels
+const videosSrc = path.join(SRC, "videos");
+if (fs.existsSync(videosSrc)) fs.cpSync(videosSrc, path.join(DIST, "videos"), { recursive: true });
+
 console.log("[build] OK —", DIST);
