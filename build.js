@@ -56,8 +56,10 @@ if (fs.existsSync(promoSrc)) {
   }
 }
 
-// Guide vidéo (tutoriels de l'application) : videos/guide/<clé>.mp4 + .jpg, copiés tels quels
-const videosSrc = path.join(SRC, "videos");
-if (fs.existsSync(videosSrc)) fs.cpSync(videosSrc, path.join(DIST, "videos"), { recursive: true });
+// Médias copiés tels quels : guide vidéo (videos/guide) et page d'accueil (landing : vidéo de présentation, captures, logo)
+for (const dir of ["videos", "landing"]) {
+  const src = path.join(SRC, dir);
+  if (fs.existsSync(src)) fs.cpSync(src, path.join(DIST, dir), { recursive: true, filter: f => !f.endsWith(".html") });
+}
 
 console.log("[build] OK —", DIST);

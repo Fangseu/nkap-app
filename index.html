@@ -10157,358 +10157,290 @@ document.addEventListener('DOMContentLoaded',function(){
 </head>
 <body>
 
-<!-- LANDING PAGE -->
+<!-- LANDING PAGE — page d'accueil publique (refonte 2026-10) : connexion visible tout de suite, tontine & diaspora, vidéo -->
 <div id="landing-page">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&display=swap" rel="stylesheet">
+<style>
+#landing-page{--lp-cream:#F6EFE3;--lp-paper:#FFFDF8;--lp-green:#2D7A52;--lp-green-d:#1F5A3C;--lp-green-s:#DCEFE3;--lp-ochre:#E0A43B;--lp-ochre-s:#F8E7C4;--lp-terra:#C8643B;--lp-ink:#1E2A24;--lp-muted:#5F6B64;--lp-line:#E6DCCB;
+  background:var(--lp-cream);color:var(--lp-ink);font-family:'Plus Jakarta Sans',system-ui,sans-serif;line-height:1.55;min-height:100vh}
+#landing-page *{box-sizing:border-box}
+/* titres en Fraunces (l'application impose Sora en !important sur h1/h2/h3) */
+#landing-page h1,#landing-page h2,#landing-page #lp-login h3,#landing-page .lp-plan h3{font-family:'Fraunces',Georgia,serif!important;max-width:none}
+#landing-page .lp-card h3,#landing-page .lp-it h3{font-family:'Plus Jakarta Sans',system-ui,sans-serif!important}
+#landing-page a{color:inherit}
+#landing-page .lp-w{max-width:1140px;margin:0 auto;padding:0 20px}
+#landing-page .lp-serif{font-family:'Fraunces',Georgia,serif;letter-spacing:-.01em}
+#landing-page .lp-k{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--lp-terra);margin-bottom:10px}
+#landing-page h2{font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:clamp(28px,4vw,42px);line-height:1.12;margin:0 0 14px}
+#landing-page .lp-sub{color:var(--lp-muted);font-size:17px;max-width:640px}
+#landing-page section{padding:72px 0}
+/* barre du haut */
+#lp-nav{position:sticky;top:0;z-index:50;background:rgba(246,239,227,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--lp-line)}
+#lp-nav .lp-w{display:flex;align-items:center;gap:18px;height:64px}
+#lp-nav .lp-logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:24px}
+#lp-nav .lp-logo i{width:34px;height:34px;border-radius:9px;background:var(--lp-green);display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+#lp-nav .lp-logo i img{height:31px}
+#lp-nav .lp-logo b{color:var(--lp-green)}
+/* annule les anciennes règles « #landing-page nav » (barre fixe) */
+#landing-page #lp-nav nav{position:static;background:none;backdrop-filter:none;border:0;padding:0;z-index:auto}
+#lp-nav nav{display:flex;gap:22px;margin-left:auto;font-size:14px;font-weight:600}
+#lp-nav nav a{text-decoration:none;color:var(--lp-muted)}
+#lp-nav nav a:hover{color:var(--lp-green)}
+#lp-nav .lp-nb{background:var(--lp-green);color:#fff;border:0;border-radius:10px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+/* haut de page */
+#lp-hero{padding:48px 0 56px;position:relative;overflow:hidden}
+/* le monument du logo, en grand, en filigrane derrière le haut de la page */
+#lp-hero .lp-bg{position:absolute;top:-4%;left:50%;transform:translateX(-50%);height:118%;aspect-ratio:100/159;background:var(--lp-green);-webkit-mask:url(landing/logo-monument.png) center/contain no-repeat;mask:url(landing/logo-monument.png) center/contain no-repeat;opacity:.09;pointer-events:none;z-index:0}
+#lp-hero .lp-w{position:relative;z-index:1}
+#lp-hero .lp-w{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center}
+#landing-page #lp-hero h1{font-weight:700;font-size:clamp(30px,5.2vw,58px);line-height:1.05;margin:0 0 18px;text-align:left}
+#lp-hero h1 em{font-style:italic;color:var(--lp-green)}
+#lp-hero .lp-pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+#lp-hero .lp-pills span{background:var(--lp-paper);border:1px solid var(--lp-line);border-radius:30px;padding:6px 12px;font-size:13px;font-weight:600}
+/* carte de connexion */
+#lp-login{background:var(--lp-paper);border:1px solid var(--lp-line);border-radius:20px;padding:26px;box-shadow:0 24px 60px rgba(31,42,36,.12)}
+#lp-login h3{font-family:'Fraunces',Georgia,serif;font-size:24px;margin:0 0 4px}
+#lp-login p.lp-s{margin:0 0 18px;color:var(--lp-muted);font-size:14px}
+#lp-login label{display:block;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--lp-muted);margin:12px 0 6px}
+#lp-login input{width:100%;border:1px solid var(--lp-line);background:#fff;border-radius:10px;padding:12px 14px;font-size:16px;font-family:inherit;color:var(--lp-ink)}
+#lp-login input:focus{outline:2px solid var(--lp-green-s);border-color:var(--lp-green)}
+#lp-login .lp-go{width:100%;margin-top:18px;background:var(--lp-green);color:#fff;border:0;border-radius:12px;padding:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit}
+#lp-login .lp-go:hover{background:var(--lp-green-d)}
+#lp-login .lp-links{display:flex;justify-content:space-between;gap:10px;margin-top:12px;font-size:13px}
+#lp-login .lp-links a{color:var(--lp-muted);cursor:pointer}
+#lp-login .lp-sep{height:1px;background:var(--lp-line);margin:18px 0}
+#lp-login .lp-alt{display:grid;gap:8px}
+#lp-login .lp-alt button{width:100%;background:none;border:1px solid var(--lp-line);border-radius:12px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--lp-ink)}
+#lp-login .lp-alt button.lp-new{border-color:var(--lp-ochre);background:var(--lp-ochre-s)}
+#lp-login .lp-err{display:none;margin-top:10px;font-size:13px;color:#B23A2E}
+/* vidéo */
+#lp-video{background:var(--lp-green-d);color:#fff}
+#lp-video h2{color:#fff}
+#lp-video .lp-sub{color:#CFE3D6}
+#lp-video video{display:block;width:100%;max-width:960px;margin:28px auto 0;border-radius:18px;box-shadow:0 30px 70px rgba(0,0,0,.35);background:#000;aspect-ratio:16/9}
+/* tontine */
+#lp-tontine .lp-w{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+#lp-landing-steps,#lp-tontine ol{list-style:none;padding:0;margin:22px 0 0;display:grid;gap:14px}
+#lp-tontine li{display:flex;gap:14px;align-items:flex-start}
+#lp-tontine li b{flex:0 0 34px;height:34px;border-radius:50%;background:var(--lp-ochre);color:var(--lp-ink);display:flex;align-items:center;justify-content:center;font-weight:800}
+#lp-tontine li div{font-size:15px}
+#lp-tontine li strong{display:block;font-size:16px}
+.lp-phones{display:flex;gap:18px;justify-content:center;align-items:flex-start}
+.lp-phone{width:230px;border-radius:30px;border:9px solid #121A16;background:#121A16;overflow:hidden;box-shadow:0 26px 60px rgba(31,42,36,.25)}
+.lp-phone img{display:block;width:100%}
+.lp-phone.lp-low{margin-top:56px}
+/* fonctions */
+#lp-roles{background:var(--lp-paper)}
+#lp-roles .lp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:30px}
+#lp-roles .lp-card{background:var(--lp-cream);border:1px solid var(--lp-line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+#lp-roles .lp-card img{display:block;width:100%;height:230px;object-fit:cover;object-position:top;border-bottom:1px solid var(--lp-line)}
+#lp-roles .lp-card div{padding:16px}
+#lp-roles .lp-card h3{margin:0 0 6px;font-size:17px}
+#lp-roles .lp-card p{margin:0;color:var(--lp-muted);font-size:14px}
+#lp-roles .lp-tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;border-radius:20px;padding:3px 10px;margin-bottom:8px}
+/* diaspora */
+#lp-diaspora .lp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px}
+#lp-diaspora .lp-it{background:var(--lp-paper);border:1px solid var(--lp-line);border-radius:16px;padding:20px}
+#lp-diaspora .lp-it span{font-size:26px}
+#lp-diaspora .lp-it h3{margin:8px 0 6px;font-size:17px}
+#lp-diaspora .lp-it p{margin:0;color:var(--lp-muted);font-size:14px}
+/* tarifs */
+#lp-prix{background:var(--lp-paper)}
+#lp-prix .lp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px;align-items:stretch}
+#lp-prix .lp-plan{border:1px solid var(--lp-line);border-radius:18px;padding:24px;background:var(--lp-cream);display:flex;flex-direction:column}
+#lp-prix .lp-plan.lp-best{border:2px solid var(--lp-green);background:#fff;box-shadow:0 18px 40px rgba(31,42,36,.1)}
+#lp-prix .lp-plan h3{margin:0;font-size:18px}
+#lp-prix .lp-price{font-family:'Fraunces',Georgia,serif;font-size:40px;font-weight:700;margin:10px 0 2px}
+#lp-prix .lp-plan small{color:var(--lp-muted)}
+#lp-prix .lp-plan ul{list-style:none;padding:0;margin:16px 0 20px;display:grid;gap:7px;font-size:14px;flex:1}
+#lp-prix .lp-plan li:before{content:"✓ ";color:var(--lp-green);font-weight:800}
+#lp-prix .lp-plan button{background:var(--lp-green);color:#fff;border:0;border-radius:12px;padding:12px;font-weight:800;cursor:pointer;font-family:inherit;font-size:15px}
+#lp-prix .lp-plan:not(.lp-best) button{background:none;color:var(--lp-green);border:2px solid var(--lp-green)}
+#lp-prix .lp-tog{display:inline-flex;background:var(--lp-cream);border:1px solid var(--lp-line);border-radius:30px;padding:4px;margin-top:10px}
+#lp-prix .lp-tog button{border:0;border-radius:30px;padding:7px 16px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px}
+/* FAQ */
+#lp-faq details{background:var(--lp-paper);border:1px solid var(--lp-line);border-radius:14px;padding:16px 18px;margin-bottom:10px}
+#lp-faq summary{cursor:pointer;font-weight:700;font-size:16px}
+#lp-faq details p{margin:10px 0 0;color:var(--lp-muted);font-size:15px}
+/* bas de page */
+#lp-cta{background:var(--lp-green);color:#fff;text-align:center}
+#lp-cta h2{color:#fff}
+#lp-cta button{background:var(--lp-ochre);color:var(--lp-ink);border:0;border-radius:12px;padding:15px 26px;font-weight:800;font-size:16px;cursor:pointer;font-family:inherit;margin:8px 6px 0}
+#lp-cta button.lp-o{background:none;color:#fff;border:2px solid rgba(255,255,255,.6)}
+#lp-foot{padding:28px 0;font-size:13px;color:var(--lp-muted)}
+#lp-foot .lp-w{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center}
+#lp-foot a{text-decoration:none;margin-left:14px}
+/* téléphone */
+@media(max-width:900px){
+  #lp-nav nav a{display:none}
+  #lp-hero{padding:16px 0 40px}
+  #lp-hero .lp-sub{display:none}
+  #lp-hero .lp-bg{height:auto;width:115%;top:2%;opacity:.08}
+  #lp-hero .lp-k{margin-bottom:6px}
+  #lp-login{padding:20px}
+  #lp-hero .lp-w,#lp-tontine .lp-w{grid-template-columns:1fr;gap:28px}
+  #lp-roles .lp-grid{grid-template-columns:1fr 1fr}
+  #lp-diaspora .lp-grid,#lp-prix .lp-grid{grid-template-columns:1fr}
+  #landing-page section{padding:52px 0}
+  .lp-phone{width:46%;border-width:6px;border-radius:22px}
+  .lp-phone.lp-low{margin-top:36px}
+}
+@media(max-width:520px){
+  #lp-roles .lp-grid{grid-template-columns:1fr}
+  #lp-roles .lp-card img{height:260px}
+  #lp-hero .lp-pills{display:none}
+  #lp-nav .lp-nb{padding:8px 12px}
+}
+</style>
 
+<header id="lp-nav"><div class="lp-w">
+  <a class="lp-logo" href="#lp-hero" onclick="window.scrollTo({top:0,behavior:'smooth'});return false"><i><img src="landing/logo-monument.png" alt=""></i><span>nkap<b>.</b></span></a>
+  <nav><a href="#lp-tontine">Tontine</a><a href="#lp-roles">Fonctions</a><a href="#lp-video">Vidéo</a><a href="#lp-prix">Tarifs</a><a href="#lp-faq">Questions</a></nav>
+  <button class="lp-nb" onclick="lpFocusLogin()">Se connecter</button>
+</div></header>
 
-<!-- NAV -->
-<nav>
-  <div class="nav-inner">
-    <div class="nav-logo">Nkap.</div>
-    <div class="nav-links">
-      <a href="#features">Fonctionnalités</a>
-      <a href="#how">Comment ça marche</a>
-      <a href="#pricing">Tarifs</a>
-      <a href="#faq">FAQ</a>
+<section id="lp-hero"><div class="lp-bg" aria-hidden="true"></div><div class="lp-w">
+  <div>
+    <span class="lp-k">Associations & tontines de la diaspora</span>
+    <h1>Votre association et sa tontine, <em>enfin claires</em> pour tout le monde.</h1>
+    <p class="lp-sub">Réunions, retards, cotisations, caisse, tontine et procès-verbaux : le bureau note une fois, chaque membre voit ses comptes sur son téléphone.</p>
+    <div class="lp-pills"><span>🎰 Tontine & tirage</span><span>📅 Réunions & PV</span><span>💰 Caisse & cotisations</span><span>📱 Sur téléphone</span></div>
+  </div>
+  <div id="lp-login">
+    <div id="lp-login-form">
+      <h3>Connexion</h3>
+      <p class="lp-s">Membre ou bureau : un seul accès.</p>
+      <form onsubmit="lpConnexion();return false">
+        <label for="lp-email">Email</label>
+        <input type="email" id="lp-email" autocomplete="email" placeholder="vous@email.com">
+        <label for="lp-pwd">Mot de passe</label>
+        <input type="password" id="lp-pwd" autocomplete="current-password" placeholder="Votre mot de passe">
+        <button type="submit" class="lp-go">Se connecter</button>
+      </form>
+      <div class="lp-err" id="lp-err"></div>
+      <div class="lp-links"><a onclick="lpVersApp(function(){dofPwd();})">Mot de passe oublié ?</a><a onclick="ouvrirGuideModal()">🎬 Comment ça marche ?</a></div>
     </div>
-    <div class="nav-cta">
-      <a href="#" class="btn btn-outline" style="padding:8px 16px;font-size:14px">Connexion</a>
-      <a href="#" class="btn btn-primary" style="padding:8px 16px;font-size:14px">Essai gratuit</a>
+    <div id="lp-login-deja" style="display:none">
+      <h3>Bon retour 👋</h3>
+      <p class="lp-s">Vous êtes déjà connecté sur cet appareil.</p>
+      <button class="lp-go" onclick="goToApp()">Ouvrir mon espace →</button>
+    </div>
+    <div class="lp-sep"></div>
+    <div class="lp-alt">
+      <button class="lp-new" onclick="lpVersApp(function(){aTab(1);})">✨ Créer mon association — 30 jours gratuits</button>
+      <button onclick="lpVersApp(function(){lancerDemo();})">▶ Essayer la démo, sans inscription</button>
     </div>
   </div>
-</nav>
+</div></section>
 
-<!-- HERO -->
-<section id="hero">
-  <div class="hero-badge">✨ Nouveau · Version SaaS disponible</div>
-  <h1>Gérez votre association<br><span>comme un professionnel</span></h1>
-  <p class="hero-sub">Membres, cotisations, réunions, dons, projets et comptabilité — tout en un seul outil, simple, mobile et sécurisé.</p>
-  <div class="hero-ctas">
-    <a href="#" class="btn btn-primary btn-lg">Commencer gratuitement →</a>
-    <a href="#features" class="btn btn-outline btn-lg">Voir les fonctionnalités</a>
+<section id="lp-video"><div class="lp-w" style="text-align:center">
+  <span class="lp-k" style="color:var(--lp-ochre)">Nkap en une minute</span>
+  <h2>Notre nkap mérite mieux qu'Excel.</h2>
+  <p class="lp-sub" style="margin:0 auto">Fini le fichier qui circule et les disputes en fin de mois : voici comment Nkap remet de l'ordre.</p>
+  <video controls playsinline preload="none" poster="landing/presentation.jpg" src="landing/presentation.mp4"></video>
+</div></section>
+
+<section id="lp-tontine"><div class="lp-w">
+  <div>
+    <span class="lp-k">Tontine</span>
+    <h2>La tontine, sans cahier ni dispute.</h2>
+    <p class="lp-sub">Nkap calcule les parts, fait le tirage et tient le calendrier. Chacun sait quand il reçoit et ce qu'il doit.</p>
+    <ol>
+      <li><b>1</b><div><strong>Les parts de chacun</strong>Un membre peut prendre une ou plusieurs parts ; Nkap vérifie la parité.</div></li>
+      <li><b>2</b><div><strong>Le tirage automatique</strong>Le bénéficiaire de chaque mois est désigné, puis le tirage est verrouillé.</div></li>
+      <li><b>3</b><div><strong>Le calendrier pour tous</strong>Chaque membre voit son mois de gain et ses cotisations, et déclare ses paiements.</div></li>
+    </ol>
   </div>
-  <p class="hero-social">Déjà utilisé par <strong>des associations partout dans le monde</strong> · Aucune carte bancaire requise</p>
-
-  <!-- Hero visuel split : photo gauche + mockup droite -->
-  <div class="hero-split" style="margin-top:64px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center;max-width:1100px;margin-left:auto;margin-right:auto">
-
-    <!-- Photo gauche : réunion association -->
-    <div style="position:relative;border-radius:20px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.5)">
-      <img src="https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=700&q=80&auto=format&fit=crop" alt="Réunion d'association" style="width:100%;height:380px;object-fit:cover;display:block">
-      <!-- Overlay gradient bas -->
-      <div style="position:absolute;bottom:0;left:0;right:0;height:50%;background:linear-gradient(to top,rgba(11,14,24,.9),transparent)"></div>
-      <!-- Badge flottant -->
-      <div style="position:absolute;bottom:20px;left:20px;right:20px;background:rgba(245,200,66,.12);border:1px solid rgba(26,158,122,.3);border-radius:12px;padding:12px 16px;backdrop-filter:blur(10px)">
-        <div style="font-size:12px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">✓ En réunion</div>
-        <div style="font-size:13px;color:#e8eaf2">Présences enregistrées · Retards calculés automatiquement</div>
-      </div>
-    </div>
-
-    <!-- Mockup droite : app dashboard -->
-    <div class="hero-mockup" style="margin-top:0">
-      <div class="mockup-bar">
-        <div class="mockup-dot" style="background:#f4645f"></div>
-        <div class="mockup-dot" style="background:var(--accent)"></div>
-        <div class="mockup-dot" style="background:#3ecf8e"></div>
-        <div class="mockup-url">app.nkap-asso.com/dashboard</div>
-      </div>
-      <div class="mockup-screen">
-        <div class="mockup-sidebar">
-          <div style="font-family:serif;font-size:16px;color:var(--accent);margin-bottom:16px;padding:8px;font-weight:700">Nkap.</div>
-          <div class="mockup-nav-item active">📊 Tableau de bord</div>
-          <div class="mockup-nav-item">👥 Membres</div>
-          <div class="mockup-nav-item">💰 Cotisations</div>
-          <div class="mockup-nav-item">📅 Réunions</div>
-          <div class="mockup-nav-item">❤ Dons</div>
-          <div class="mockup-nav-item">🏗 Projets</div>
-          <div class="mockup-nav-item">🏦 Fond Caisse</div>
-          <div class="mockup-nav-item">📈 Comptabilité</div>
-        </div>
-        <div class="mockup-content">
-          <div class="mockup-card"><div class="mockup-card-label">Membres actifs</div><div class="mockup-card-val accent">12</div></div>
-          <div class="mockup-card"><div class="mockup-card-label">Cotisations perçues</div><div class="mockup-card-val green">1 440 €</div></div>
-          <div class="mockup-card"><div class="mockup-card-label">Fond caisse</div><div class="mockup-card-val">320 €</div></div>
-          <div class="mockup-table">
-            <div style="font-size:11px;font-weight:600;color:#5a607a;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Activité récente</div>
-            <div class="mockup-row"><div class="mockup-avatar" style="background:rgba(91,141,239,.2);color:#5b8def">JD</div><span style="flex:1">Cotisation janvier</span><span class="mockup-badge" style="background:rgba(62,207,142,.15);color:#3ecf8e">Payé</span></div>
-            <div class="mockup-row"><div class="mockup-avatar" style="background:rgba(26,158,122,.2);color:var(--accent)">ML</div><span style="flex:1">Réunion mensuelle</span><span class="mockup-badge" style="background:rgba(91,141,239,.15);color:#5b8def">2 retards</span></div>
-            <div class="mockup-row"><div class="mockup-avatar" style="background:rgba(155,114,232,.2);color:#9b72e8">AP</div><span style="flex:1">Projet — 500 €</span><span class="mockup-badge" style="background:rgba(155,114,232,.15);color:#9b72e8">En cours</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="lp-phones">
+    <div class="lp-phone"><img src="landing/ecran-tontine.jpg" alt="Calendrier de la tontine" loading="lazy"></div>
+    <div class="lp-phone lp-low"><img src="landing/ecran-ma-tontine.jpg" alt="Ma tontine, côté membre" loading="lazy"></div>
   </div>
-</section>
+</div></section>
 
-<!-- LOGOS -->
-<div class="logos-section">
-  <div class="logos-inner">
-    <p class="logos-label">Fonctionne sur tous vos appareils</p>
-    <div class="logos-row">
-      <div class="logo-item">🌐 Chrome / Firefox</div>
-      <div class="logo-item">📱 iPhone / Android</div>
-      <div class="logo-item">💻 Mac / Windows</div>
-      <div class="logo-item">📊 Export CSV / PDF</div>
-    </div>
+<section id="lp-roles"><div class="lp-w">
+  <span class="lp-k">Chacun son rôle</span>
+  <h2>Chaque membre du bureau voit ce qui le concerne.</h2>
+  <p class="lp-sub">Les menus s'adaptent à la fonction : rien de trop, rien qui manque. Et un guide vidéo explique chaque tâche.</p>
+  <div class="lp-grid">
+    <div class="lp-card"><img src="landing/ecran-membre.jpg" alt="Espace membre" loading="lazy"><div><span class="lp-tag" style="background:var(--lp-green)">Membre</span><h3>Ses comptes, en clair</h3><p>Cotisations, retards et amendes dus, prochaine réunion avec l'adresse, déclaration d'un paiement.</p></div></div>
+    <div class="lp-card"><img src="landing/ecran-secretaire.jpg" alt="Nouvelle réunion" loading="lazy"><div><span class="lp-tag" style="background:#B07A1C">Secrétaire</span><h3>Réunions et PV</h3><p>L'appel en quelques touches, les retards calculés tout seuls, les votes, les projets, la tontine.</p></div></div>
+    <div class="lp-card"><img src="landing/ecran-tresorier.jpg" alt="Paiements à valider" loading="lazy"><div><span class="lp-tag" style="background:var(--lp-green-d)">Trésorier</span><h3>La caisse à jour</h3><p>Il valide les paiements déclarés : la fiche du membre et la caisse se mettent à jour.</p></div></div>
+    <div class="lp-card"><img src="landing/ecran-president.jpg" alt="Tableau de bord" loading="lazy"><div><span class="lp-tag" style="background:var(--lp-terra)">Président</span><h3>Tout, d'un coup d'œil</h3><p>Les chiffres clés, les alertes, la validation des PV, le bureau et les délégations.</p></div></div>
   </div>
-</div>
+</div></section>
 
-<!-- SECTION VISUELLE : personnes qui utilisent l'app -->
-<section style="padding:80px 5%;background:var(--bg1,#0b0e18)">
-  <div class="container">
-    <div class="section-label">Conçu pour vous</div>
-    <h2 class="section-title" style="margin-bottom:16px">Utilisé partout, à tout moment</h2>
-    <p class="section-sub" style="margin-bottom:56px">Sur votre ordinateur au bureau ou sur votre téléphone en réunion, Nkap. s'adapte à votre rythme.</p>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
-
-      <!-- Carte 1 : personne sur laptop avec l'app en fond -->
-      <div style="position:relative;border-radius:20px;overflow:hidden;background:#13172a;box-shadow:0 24px 60px rgba(0,0,0,.5)">
-        <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&q=80&auto=format&fit=crop" alt="Gestion sur ordinateur" style="width:100%;height:300px;object-fit:cover;display:block;opacity:.75">
-        <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(11,14,24,.3) 0%,rgba(11,14,24,.7) 100%)"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:28px">
-          <div style="display:inline-block;background:rgba(26,158,122,.15);border:1px solid rgba(26,158,122,.3);color:var(--accent);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:4px 10px;border-radius:20px;margin-bottom:12px">Sur ordinateur</div>
-          <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px">Gérez votre trésorerie</div>
-          <div style="font-size:13px;color:#8b91a8;line-height:1.5">Tableau de bord complet, journal comptable, export CSV — tout visible en un coup d'œil depuis votre bureau.</div>
-        </div>
-        <!-- Mini badge flottant haut-droit -->
-        <div style="position:absolute;top:20px;right:20px;background:rgba(62,207,142,.15);border:1px solid rgba(62,207,142,.3);border-radius:10px;padding:8px 12px;backdrop-filter:blur(8px)">
-          <div style="font-size:11px;color:#3ecf8e;font-weight:600">📊 Solde caisse</div>
-          <div style="font-size:16px;color:#fff;font-weight:700">+1 240 €</div>
-        </div>
-      </div>
-
-      <!-- Carte 2 : groupe réunion association -->
-      <div style="position:relative;border-radius:20px;overflow:hidden;background:#13172a;box-shadow:0 24px 60px rgba(0,0,0,.5)">
-        <img src="https://images.unsplash.com/photo-1531545514256-b1400bc00f31?w=800&q=80&auto=format&fit=crop" alt="Réunion association" style="width:100%;height:300px;object-fit:cover;display:block;opacity:.75">
-        <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(11,14,24,.2) 0%,rgba(11,14,24,.65) 100%)"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:28px">
-          <div style="display:inline-block;background:rgba(91,141,239,.15);border:1px solid rgba(91,141,239,.3);color:#5b8def;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:4px 10px;border-radius:20px;margin-bottom:12px">En réunion</div>
-          <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px">Présences en temps réel</div>
-          <div style="font-size:13px;color:#8b91a8;line-height:1.5">Enregistrez les présences, retards et absences sur votre téléphone pendant que la réunion se déroule.</div>
-        </div>
-        <!-- Badge flottant -->
-        <div style="position:absolute;top:20px;right:20px;background:rgba(91,141,239,.15);border:1px solid rgba(91,141,239,.3);border-radius:10px;padding:8px 12px;backdrop-filter:blur(8px)">
-          <div style="font-size:11px;color:#5b8def;font-weight:600">👥 Présents</div>
-          <div style="font-size:16px;color:#fff;font-weight:700">9 / 12</div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Ligne du bas : 3e image + stats -->
-    <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:28px;margin-top:28px;align-items:center">
-
-      <!-- Carte 3 : personne connectée ordinateur de bureau -->
-      <div style="position:relative;border-radius:20px;overflow:hidden;background:#13172a;box-shadow:0 24px 60px rgba(0,0,0,.5)">
-        <img src="https://images.unsplash.com/photo-1553484771-047a44eee27b?w=900&q=80&auto=format&fit=crop" alt="Personne sur ordinateur" style="width:100%;height:260px;object-fit:cover;display:block;opacity:.7">
-        <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(11,14,24,.2) 0%,rgba(11,14,24,.65) 100%)"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:24px">
-          <div style="display:inline-block;background:rgba(155,114,232,.15);border:1px solid rgba(155,114,232,.3);color:#9b72e8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:4px 10px;border-radius:20px;margin-bottom:10px">Administration</div>
-          <div style="font-size:17px;font-weight:700;color:#fff;margin-bottom:4px">Votre asso, toujours à jour</div>
-          <div style="font-size:13px;color:#8b91a8;line-height:1.5">Accédez à l'historique complet, aux statistiques et aux rapports depuis n'importe quel appareil.</div>
-        </div>
-        <!-- Mockup mini en superposition -->
-        <div style="position:absolute;top:16px;right:16px;background:rgba(13,17,30,.85);border:1px solid rgba(26,158,122,.2);border-radius:10px;padding:10px 14px;backdrop-filter:blur(10px);min-width:130px">
-          <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:6px">🏦 Fonds</div>
-          <div style="font-size:11px;color:#8b91a8;margin-bottom:2px">Adhésion <span style="color:#3ecf8e;float:right">4 800 €</span></div>
-          <div style="font-size:11px;color:#8b91a8;margin-bottom:2px">Caisse <span style="color:#3ecf8e;float:right">1 240 €</span></div>
-          <div style="font-size:11px;color:#8b91a8">Cotisation <span style="color:#3ecf8e;float:right">720 €</span></div>
-        </div>
-      </div>
-
-      <!-- Bloc chiffres clés -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div style="background:linear-gradient(135deg,var(--accent-light),rgba(245,200,66,.04));border:1px solid rgba(26,158,122,.2);border-radius:16px;padding:24px;text-align:center">
-          <div style="font-size:36px;font-weight:800;color:var(--accent);font-family:serif">100%</div>
-          <div style="font-size:12px;color:#8b91a8;margin-top:4px">Mobile friendly</div>
-        </div>
-        <div style="background:linear-gradient(135deg,rgba(62,207,142,.1),rgba(62,207,142,.04));border:1px solid rgba(62,207,142,.2);border-radius:16px;padding:24px;text-align:center">
-          <div style="font-size:36px;font-weight:800;color:#3ecf8e;font-family:serif">0€</div>
-          <div style="font-size:12px;color:#8b91a8;margin-top:4px">Pour commencer</div>
-        </div>
-        <div style="background:linear-gradient(135deg,rgba(91,141,239,.1),rgba(91,141,239,.04));border:1px solid rgba(91,141,239,.2);border-radius:16px;padding:24px;text-align:center">
-          <div style="font-size:36px;font-weight:800;color:#5b8def;font-family:serif">14</div>
-          <div style="font-size:12px;color:#8b91a8;margin-top:4px">Modules intégrés</div>
-        </div>
-        <div style="background:linear-gradient(135deg,rgba(155,114,232,.1),rgba(155,114,232,.04));border:1px solid rgba(155,114,232,.2);border-radius:16px;padding:24px;text-align:center">
-          <div style="font-size:36px;font-weight:800;color:#9b72e8;font-family:serif">5min</div>
-          <div style="font-size:12px;color:#8b91a8;margin-top:4px">Pour démarrer</div>
-        </div>
-      </div>
-
-    </div>
+<section id="lp-diaspora"><div class="lp-w">
+  <span class="lp-k">Pensé pour la diaspora</span>
+  <h2>Où que soient vos membres.</h2>
+  <p class="lp-sub">Des associations de la diaspora africaine l'utilisent chaque mois, entre Bruxelles, Paris et ailleurs.</p>
+  <div class="lp-grid">
+    <div class="lp-it"><span>📍</span><h3>Le lieu de réunion</h3><p>L'adresse de l'hôte, cliquable pour l'itinéraire, et un rappel avant la réunion.</p></div>
+    <div class="lp-it"><span>✉️</span><h3>Les rappels partent seuls</h3><p>Réunions, cotisations, tontine, échéances de projet : chacun est prévenu par email.</p></div>
+    <div class="lp-it"><span>💳</span><h3>Les paiements déclarés</h3><p>Virement, espèces, Mobile Money : le membre déclare, le trésorier valide.</p></div>
+    <div class="lp-it"><span>📄</span><h3>Des PV officiels</h3><p>Présents, retards, absents et état des caisses du jour, signés par le bureau.</p></div>
+    <div class="lp-it"><span>🗳️</span><h3>Les décisions ensemble</h3><p>Votes à distance, majorité simple ou absolue, nominatifs ou anonymes.</p></div>
+    <div class="lp-it"><span>🔒</span><h3>Vos données à l'abri</h3><p>Chaque association a son espace isolé, hébergé en Europe ; export possible à tout moment.</p></div>
   </div>
-</section>
+</div></section>
 
-<!-- FEATURES -->
-<section id="features">
-  <div class="container">
-    <div class="section-label">Fonctionnalités</div>
-    <h2 class="section-title">Tout ce dont votre association a besoin</h2>
-    <p class="section-sub">Conçu par et pour des responsables d'association. Chaque fonctionnalité répond à un besoin réel.</p>
-    <div class="features-grid">
-      <div class="feature-card fade-up">
-        <div class="feature-icon">👥</div>
-        <div class="feature-title">Gestion des membres</div>
-        <div class="feature-desc">Fiches membres complètes et modifiables. Statut actif/inactif, historique financier complet, taux de présence aux réunions.</div>
-      </div>
-      <div class="feature-card fade-up">
-        <div class="feature-icon">💰</div>
-        <div class="feature-title">Cotisations & Adhésions</div>
-        <div class="feature-desc">Suivi des cotisations mensuelles et adhésions annuelles. Fond adhésion par membre avec historique des mouvements.</div>
-      </div>
-      <div class="feature-card fade-up">
-        <div class="feature-icon">📅</div>
-        <div class="feature-title">Réunions intelligentes</div>
-        <div class="feature-desc">Présences, retards et absences en un clic. Calcul automatique des pénalités selon l'heure d'arrivée. Amende dès la 3e absence. Reset annuel le 2e samedi d'octobre.</div>
-      </div>
-      <div class="feature-card fade-up">
-        <div class="feature-icon">❤️</div>
-        <div class="feature-title">Dons mutualisés</div>
-        <div class="feature-desc">Don accordé à un membre, réparti automatiquement sur les autres. Remboursement en 3 mois. Fonds du bénéficiaire préservé.</div>
-      </div>
-      <div class="feature-card fade-up">
-        <div class="feature-icon">💸</div>
-        <div class="feature-title">Prêts associatifs</div>
-        <div class="feature-desc">Prêt réparti sur tous les membres. Suivi des remboursements individuels avec échéances et alertes automatiques.</div>
-      </div>
-      <div class="feature-card fade-up">
-        <div class="feature-icon">🏦</div>
-        <div class="feature-title">Fond Caisse & Cotisation</div>
-        <div class="feature-desc">Deux fonds distincts avec journal des opérations, solde en temps réel, sorties manuelles et virements vers membres.</div>
-      </div>
-      <div class="feature-card fade-up">
-        <div class="feature-icon">🔔</div>
-        <div class="feature-title">Alertes automatiques</div>
-        <div class="feature-desc">Remboursements en retard, cotisations impayées, amendes non réglées. Badge rouge dans le menu pour ne rien manquer.</div>
-      </div>
-      <div class="feature-card fade-up">
-        <div class="feature-icon">📊</div>
-        <div class="feature-title">Comptabilité complète</div>
-        <div class="feature-desc">Journal chronologique de toutes les opérations, filtrable par année. Export CSV pour vos déclarations. Impression possible.</div>
-      </div>
-      <div class="feature-card fade-up">
-        <div class="feature-icon">📱</div>
-        <div class="feature-title">100% Mobile</div>
-        <div class="feature-desc">Interface responsive pensée pour le téléphone. Utilisable comme une vraie application installée sur votre écran d'accueil.</div>
-      </div>
-    </div>
+<section id="lp-prix"><div class="lp-w" style="text-align:center">
+  <span class="lp-k">Tarifs</span>
+  <h2>Simple et transparent.</h2>
+  <p class="lp-sub" style="margin:0 auto">30 jours gratuits, sans carte bancaire. Puis la formule qui vous convient, pour toute l'association.</p>
+  <div class="lp-tog"><button id="tog-month" onclick="togglePricing('month')" style="background:var(--lp-green);color:#fff">Mensuel</button><button id="tog-year" onclick="togglePricing('year')" style="background:none;color:var(--lp-muted)">Annuel −17 %</button></div>
+  <div class="lp-grid" style="text-align:left">
+    <div class="lp-plan"><h3>Essai</h3><div class="lp-price">0 €</div><small>30 jours offerts, sans engagement</small>
+      <ul><li>Tous les modules</li><li>Membres illimités</li><li>Tontine, cotisations, dons</li><li>Guide vidéo</li></ul>
+      <button onclick="lpVersApp(function(){aTab(1);})">Démarrer gratuitement</button></div>
+    <div class="lp-plan lp-best"><h3>Abonnement <span style="font-size:12px;background:var(--lp-ochre-s);border-radius:20px;padding:2px 8px;margin-left:4px">⭐ le plus choisi</span></h3><div class="lp-price" id="price-display">5 <span style="font-size:14px">€ / mois</span></div><small id="price-sub">facturation mensuelle</small>
+      <ul><li>Tous les modules inclus</li><li>Membres illimités</li><li>Tontine, prêts, Vente Argent</li><li>Rappels email automatiques</li><li>Mises à jour incluses</li></ul>
+      <button onclick="payerStripe('sub')">💳 S'abonner</button></div>
+    <div class="lp-plan"><h3>Licence à vie</h3><div class="lp-price">80 €</div><small>paiement unique, accès à vie</small>
+      <ul><li>Tout l'abonnement</li><li>Aucun renouvellement</li><li>Mises à jour à vie</li><li>Rentable dès 16 mois</li></ul>
+      <button onclick="payerStripe('lifetime')">🔑 Payer 80 € une fois</button></div>
   </div>
-</section>
+  <p style="margin-top:16px;font-size:13px;color:var(--lp-muted)">🔒 Paiement sécurisé par Stripe · carte, Apple Pay, Google Pay</p>
+</div></section>
 
-<!-- HOW IT WORKS -->
-<section id="how">
-  <div class="container">
-    <div class="section-label">Simple à démarrer</div>
-    <h2 class="section-title">Opérationnel en moins de 5 minutes</h2>
-    <div class="steps">
-      <div class="step fade-up">
-        <div class="step-num">1</div>
-        <div class="step-title">Créez votre espace</div>
-        <div class="step-desc">Inscrivez-vous avec votre email, donnez un nom à votre association. Aucune carte requise.</div>
-      </div>
-      <div class="step fade-up">
-        <div class="step-num">2</div>
-        <div class="step-title">Ajoutez vos membres</div>
-        <div class="step-desc">Importez ou saisissez vos membres en quelques secondes. Les fonds sont créés automatiquement.</div>
-      </div>
-      <div class="step fade-up">
-        <div class="step-num">3</div>
-        <div class="step-title">Personnalisez les règles</div>
-        <div class="step-desc">Adaptez les montants, l'heure de réunion, les tranches de retard selon vos statuts.</div>
-      </div>
-      <div class="step fade-up">
-        <div class="step-num">4</div>
-        <div class="step-title">Gérez au quotidien</div>
-        <div class="step-desc">Enregistrez cotisations, réunions et transactions. L'application calcule tout automatiquement.</div>
-      </div>
-    </div>
-  </div>
-</section>
+<section id="lp-faq"><div class="lp-w" style="max-width:820px">
+  <span class="lp-k">Questions</span>
+  <h2>Ce qu'on nous demande souvent.</h2>
+  <details><summary>Mes données sont-elles sécurisées ?</summary><p>Oui. Elles sont hébergées sur des serveurs sécurisés, avec chiffrement en transit et au repos. Chaque association dispose d'un espace totalement isolé, et vous pouvez exporter vos données à tout moment.</p></details>
+  <details><summary>Les membres doivent-ils installer quelque chose ?</summary><p>Non. Nkap s'ouvre dans le navigateur du téléphone ou de l'ordinateur. On peut aussi l'ajouter à l'écran d'accueil du téléphone, comme une application.</p></details>
+  <details><summary>Puis-je adapter les règles de mon association ?</summary><p>Oui : l'heure de réunion, les tranches de retard et leurs montants, l'amende d'absence, le nombre d'absences avant amende, la durée de remboursement des dons et prêts, le logo et les couleurs.</p></details>
+  <details><summary>Comment fonctionne la tontine dans Nkap ?</summary><p>Vous indiquez le montant d'une part et les parts de chaque membre ; Nkap fait le tirage, crée le calendrier et les cotisations de chacun. Deux méthodes de calcul sont proposées : gain fixe ou pot mensuel.</p></details>
+  <details><summary>Comment se passe la facturation ?</summary><p>Paiement sécurisé par carte via Stripe, annulable à tout moment. En cas d'annulation, l'accès reste ouvert jusqu'à la fin de la période payée. Les plans annuels offrent 2 mois mais ne sont pas remboursables partiellement.</p></details>
+  <details><summary>Besoin d'aide ?</summary><p>Écrivez-nous sur <a href="https://wa.me/32489979562?text=Bonjour%2C%20j%27ai%20besoin%20d%27aide%20avec%20Nkap." target="_blank" rel="noopener">WhatsApp</a> ou par <a href="mailto:fangseu@gmail.com">email</a>. Et le guide vidéo explique chaque tâche en une minute.</p></details>
+</div></section>
 
-<!-- PRICING -->
-<section id="pricing">
-  <div class="container" style="text-align:center">
-    <div class="section-label">Tarifs</div>
-    <h2 class="section-title">Simple et transparent</h2>
-    <p class="section-sub" style="margin:0 auto 0">30 jours gratuits, sans carte bancaire. Puis choisissez la formule qui vous convient.</p>
-    <div style="display:inline-flex;align-items:center;gap:12px;margin:32px auto 0;background:var(--bg3);border:1px solid var(--border);border-radius:40px;padding:4px 6px">
-      <button id="tog-month" onclick="togglePricing('month')" style="background:var(--accent);color:#fff;border:none;border-radius:40px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s">Mensuel</button>
-      <button id="tog-year" onclick="togglePricing('year')" style="background:none;color:var(--text2);border:none;border-radius:40px;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s">Annuel <span style="background:rgba(26,158,122,.15);color:var(--accent);font-size:10px;padding:2px 6px;border-radius:20px;margin-left:4px">-17%</span></button>
-    </div>
-    <div class="pricing-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));max-width:860px;margin-top:32px">
-      <div class="pricing-card fade-up">
-        <div class="pricing-name">Essai</div>
-        <div class="pricing-price">0 <span style="font-size:14px">€</span></div>
-        <div class="pricing-desc">30 jours offerts, sans engagement</div>
-        <ul class="pricing-features">
-          <li>Tous les modules inclus</li>
-          <li>Membres illimités</li>
-          <li>Tontine, cotisations, dons</li>
-          <li>Photo de profil</li>
-          <li class="na">Accès après 30 jours</li>
-          <li class="na">Support</li>
-        </ul>
-        <a href="#" class="btn btn-outline" style="width:100%;justify-content:center">Démarrer gratuitement →</a>
-      </div>
-      <div class="pricing-card featured fade-up">
-        <div class="pricing-badge">⭐ Le plus choisi</div>
-        <div class="pricing-name">Abonnement</div>
-        <div id="price-display" class="pricing-price">5 <span style="font-size:14px">€ / mois</span></div>
-        <div id="price-sub" class="pricing-desc">facturation mensuelle</div>
-        <ul class="pricing-features">
-          <li>Tous les modules inclus</li>
-          <li>Membres illimités</li>
-          <li>Tontine, cotisations, dons, prêts</li>
-          <li>Photo &amp; personnalisation</li>
-          <li>Support par email</li>
-          <li>Mises à jour incluses</li>
-        </ul>
-        <button onclick="payerStripe('sub')" class="btn btn-primary" style="width:100%;justify-content:center;border:none;cursor:pointer">💳 S'abonner avec Stripe →</button>
-      </div>
-      <div class="pricing-card fade-up" style="border-color:rgba(139,92,246,.4);background:linear-gradient(135deg,rgba(139,92,246,.04),var(--bg2))">
-        <div class="pricing-badge" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">🔑 À vie</div>
-        <div class="pricing-name" style="color:#8b5cf6">Licence vie</div>
-        <div class="pricing-price" style="color:#8b5cf6">80 <span style="font-size:14px">€</span></div>
-        <div class="pricing-desc">paiement unique, accès à vie</div>
-        <ul class="pricing-features">
-          <li>Tout l'abonnement inclus</li>
-          <li>Aucun renouvellement</li>
-          <li>Mises à jour à vie</li>
-          <li>Support à vie</li>
-          <li>Priorité sur les nouvelles fonctions</li>
-          <li>Économisez vs mensuel dès 16 mois</li>
-        </ul>
-        <button onclick="payerStripe('lifetime')" class="btn" style="width:100%;justify-content:center;border:none;cursor:pointer;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;padding:11px 20px;border-radius:10px;font-weight:700;font-size:14px;font-family:'Plus Jakarta Sans',sans-serif">🚀 Payer 80€ une fois →</button>
-      </div>
-    </div>
-    <div style="margin-top:24px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--text3);font-size:12px">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Paiement sécurisé par <strong style="color:#635bff;margin-left:4px">Stripe</strong> &nbsp;·&nbsp; CB, Apple Pay, Google Pay
-    </div>
-  </div>
-</section>
+<section id="lp-cta"><div class="lp-w">
+  <h2>Prêt à remettre de l'ordre dans votre nkap ?</h2>
+  <p style="color:#DCEFE3;margin:0 0 10px">30 jours gratuits · sans carte bancaire · prêt en 5 minutes</p>
+  <button onclick="lpVersApp(function(){aTab(1);})">Créer mon association</button>
+  <button class="lp-o" onclick="lpFocusLogin()">Se connecter</button>
+</div></section>
+
+<footer id="lp-foot"><div class="lp-w">
+  <span>© Nkap. — Association & Tontine</span>
+  <span><a onclick="ouvrirGuideModal()" style="cursor:pointer">Guide vidéo</a><a href="mailto:fangseu@gmail.com">Contact</a><a href="https://wa.me/32489979562" target="_blank" rel="noopener">WhatsApp</a></span>
+</div></footer>
+
 <script>
 var _pricingMode='month';
 function togglePricing(mode){
   _pricingMode=mode;
   var tM=document.getElementById('tog-month'),tY=document.getElementById('tog-year');
   var pd=document.getElementById('price-display'),ps=document.getElementById('price-sub');
+  var on='var(--lp-green)',off='var(--lp-muted)';
   if(mode==='year'){
-    tM.style.background='none';tM.style.color='var(--text2)';
-    tY.style.background='var(--accent)';tY.style.color='#fff';
-    pd.innerHTML='55 <span style="font-size:14px">€ / an</span>';
-    ps.textContent='soit 4,58€/mois — 2 mois offerts';
+    tM.style.background='none';tM.style.color=off;tY.style.background=on;tY.style.color='#fff';
+    pd.innerHTML='55 <span style="font-size:14px">€ / an</span>';ps.textContent='soit 4,58 €/mois — 2 mois offerts';
   } else {
-    tY.style.background='none';tY.style.color='var(--text2)';
-    tM.style.background='var(--accent)';tM.style.color='#fff';
-    pd.innerHTML='5 <span style="font-size:14px">€ / mois</span>';
-    ps.textContent='facturation mensuelle';
+    tY.style.background='none';tY.style.color=off;tM.style.background=on;tM.style.color='#fff';
+    pd.innerHTML='5 <span style="font-size:14px">€ / mois</span>';ps.textContent='facturation mensuelle';
   }
 }
 function payerStripe(type){
-  // Remplacez ces liens par vos vrais Stripe Payment Links
   var links={
     sub_month:'https://buy.stripe.com/14AeVf8O81fF6wCa6GdMI00',
     sub_year:'https://buy.stripe.com/4gM5kF5BW8I78EK5QqdMI01',
@@ -10517,155 +10449,47 @@ function payerStripe(type){
   var key=type==='lifetime'?'lifetime':('sub_'+_pricingMode);
   window.open(links[key],'_blank');
 }
+// Ouvre l'application (comme goToApp), puis lance l'action quand la connexion à la base est prête
+function lpVersApp(action){
+  goToApp();
+  var n=0,t=setInterval(function(){
+    n++;
+    if(window.sb&&document.getElementById('screen-auth')){clearInterval(t);if(action)setTimeout(action,150);}
+    else if(n>100)clearInterval(t);
+  },100);
+}
+// Connexion directement depuis la page d'accueil : on remplit le vrai formulaire puis on se connecte
+function lpConnexion(){
+  var em=(document.getElementById('lp-email').value||'').trim(),pw=document.getElementById('lp-pwd').value||'';
+  var er=document.getElementById('lp-err');
+  if(!em||!pw){er.textContent='Indiquez votre email et votre mot de passe.';er.style.display='block';return;}
+  er.style.display='none';
+  lpVersApp(function(){
+    var e=document.getElementById('li-email'),p=document.getElementById('li-pwd');
+    if(e)e.value=em;if(p)p.value=pw;
+    if(typeof doLogin==='function')doLogin();
+  });
+}
+function lpFocusLogin(){
+  window.scrollTo({top:0,behavior:'smooth'});
+  setTimeout(function(){var e=document.getElementById('lp-email');if(e&&document.getElementById('lp-login-form').style.display!=='none')e.focus();},400);
+}
+// Déjà connecté sur cet appareil ? (session Supabase gardée par le navigateur) → bouton « Ouvrir mon espace »
+(function(){
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k=localStorage.key(i);
+      if(/^sb-.*-auth-token$/.test(k)&&localStorage.getItem(k)){
+        document.getElementById('lp-login-form').style.display='none';
+        document.getElementById('lp-login-deja').style.display='block';
+        break;
+      }
+    }
+  }catch(_){}
+})();
 </script>
-
-<!-- TESTIMONIALS -->
-<section id="testimonials">
-  <div class="container" style="text-align:center">
-    <div class="section-label">Témoignages</div>
-    <h2 class="section-title">Ils nous font confiance</h2>
-    <div class="testimonials-grid" style="margin-top:60px">
-      <div class="testimonial fade-up" style="text-align:left;position:relative">
-        <div style="position:absolute;top:-2px;left:20px;font-size:48px;color:rgba(26,158,122,.15);font-family:serif;line-height:1">"</div>
-        <div class="testimonial-stars" style="margin-bottom:12px">★★★★★</div>
-        <p class="testimonial-text">"Enfin un outil qui comprend vraiment le fonctionnement d'une association. Le module réunions avec le calcul automatique des retards nous fait gagner un temps fou."</p>
-        <div class="testimonial-author" style="margin-top:16px">
-          <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#5b8def,#9b72e8);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;flex-shrink:0">KM</div>
-          <div><div class="testimonial-name">Kouamé M.</div><div class="testimonial-role">Président, Association Solidarité</div></div>
-        </div>
-      </div>
-      <div class="testimonial fade-up" style="text-align:left;position:relative">
-        <div style="position:absolute;top:-2px;left:20px;font-size:48px;color:rgba(62,207,142,.15);font-family:serif;line-height:1">"</div>
-        <div class="testimonial-stars" style="margin-bottom:12px">★★★★★</div>
-        <p class="testimonial-text">"Le module des dons est exactement ce qu'il nous fallait. La répartition automatique sur les membres et le suivi des remboursements sont impeccables."</p>
-        <div class="testimonial-author" style="margin-top:16px">
-          <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#5b8def);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;flex-shrink:0">FD</div>
-          <div><div class="testimonial-name">Fatou D.</div><div class="testimonial-role">Trésorière, Foyer des Jeunes</div></div>
-        </div>
-      </div>
-      <div class="testimonial fade-up" style="text-align:left;position:relative">
-        <div style="position:absolute;top:-2px;left:20px;font-size:48px;color:rgba(155,114,232,.15);font-family:serif;line-height:1">"</div>
-        <div class="testimonial-stars" style="margin-bottom:12px">★★★★★</div>
-        <p class="testimonial-text">"J'utilise Nkap. sur mon téléphone pendant les réunions. En 2 minutes, les présences sont saisies et les retards calculés. C'est vraiment magique."</p>
-        <div class="testimonial-author" style="margin-top:16px">
-          <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#9b72e8,var(--accent));display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;flex-shrink:0">AB</div>
-          <div><div class="testimonial-name">Aminata B.</div><div class="testimonial-role">Secrétaire générale</div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- CTA final -->
-    <div style="margin-top:72px;padding:56px 40px;background:linear-gradient(135deg,var(--accent-light),rgba(91,141,239,.08));border:1px solid rgba(26,158,122,.15);border-radius:24px">
-      <h2 style="font-size:32px;margin-bottom:12px;color:#f0f2f8">Prêt à moderniser votre association ?</h2>
-      <p style="color:#8b91a8;font-size:16px;margin-bottom:32px">Rejoignez des centaines d'associations qui font confiance à Nkap.. Gratuit pour commencer.</p>
-      <a href="#" class="btn btn-primary btn-lg" style="font-size:16px;padding:14px 36px">Créer mon compte gratuitement →</a>
-      <p style="color:#5a607a;font-size:12px;margin-top:16px">Aucune carte bancaire · Aucune limite de durée · Données exportables</p>
-    </div>
-  </div>
-</section>
-
-<!-- FAQ -->
-<section id="faq">
-  <div class="container" style="text-align:center">
-    <div class="section-label">Questions fréquentes</div>
-    <h2 class="section-title">Tout ce que vous devez savoir</h2>
-    <div class="faq-grid" style="text-align:left">
-      <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">Mes données sont-elles sécurisées ?</div>
-        <div class="faq-a">Oui. Vos données sont hébergées sur des serveurs sécurisés (Supabase) avec chiffrement en transit et au repos. Chaque association dispose d'un espace totalement isolé. Vous pouvez exporter toutes vos données à tout moment.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">Puis-je personnaliser les règles de mon association ?</div>
-        <div class="faq-a">Oui. Depuis le panneau de configuration, vous pouvez adapter : l'heure de réunion, les tranches de retard et leurs montants, le montant de l'amende d'absence, le nombre d'absences avant amende, la durée de remboursement des dons et prêts, le logo et les couleurs.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">L'application fonctionne-t-elle sans internet ?</div>
-        <div class="faq-a">La version SaaS nécessite une connexion internet. Si vous avez besoin d'une version hors ligne, nous proposons aussi un fichier HTML autonome avec export/import de données.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">Comment se passe la facturation ?</div>
-        <div class="faq-a">Paiement sécurisé par carte bancaire via Stripe. Vous pouvez annuler à tout moment. En cas d'annulation, vous conservez l'accès jusqu'à la fin de la période payée.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">Puis-je migrer mes données existantes ?</div>
-        <div class="faq-a">Si vous utilisez déjà notre version locale, vous pouvez importer votre fichier JSON directement dans votre espace en ligne. Toutes vos données seront préservées.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">Y a-t-il un engagement minimum ?</div>
-        <div class="faq-a">Non. Les plans mensuels peuvent être annulés à tout moment. Les plans annuels offrent 2 mois gratuits mais ne sont pas remboursables partiellement.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CONTACT SUPERADMIN -->
-<section id="contact" style="background:var(--bg2);padding:80px 5%">
-  <div class="container" style="text-align:center">
-    <div class="section-label">Support</div>
-    <h2 class="section-title">Besoin d'aide ?</h2>
-    <p class="section-sub" style="margin:16px auto 48px">Notre équipe est disponible pour répondre à toutes vos questions. Contactez-nous directement via email ou WhatsApp.</p>
-    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
-      <!-- Bouton Email -->
-      <a href="mailto:fangseu@gmail.com"
-         style="display:inline-flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 28px;color:var(--text);text-decoration:none;font-size:15px;font-weight:600;transition:all .2s;min-width:240px;justify-content:center"
-         onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(26,158,122,.15)'"
-         onmouseout="this.style.borderColor='var(--border)';this.style.transform='none';this.style.boxShadow='none'">
-        <span style="width:40px;height:40px;border-radius:50%;background:rgba(245,200,66,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-        </span>
-        <div style="text-align:left">
-          <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Email</div>
-          <div>fangseu@gmail.com</div>
-        </div>
-      </a>
-      <!-- Bouton WhatsApp -->
-      <a href="https://wa.me/32489979562?text=Bonjour%2C%20j%27ai%20besoin%20d%27aide%20avec%20Mboa." target="_blank" rel="noopener"
-         style="display:inline-flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 28px;color:var(--text);text-decoration:none;font-size:15px;font-weight:600;transition:all .2s;min-width:240px;justify-content:center"
-         onmouseover="this.style.borderColor='#25D366';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(37,211,102,.15)'"
-         onmouseout="this.style.borderColor='var(--border)';this.style.transform='none';this.style.boxShadow='none'">
-        <span style="width:40px;height:40px;border-radius:50%;background:rgba(37,211,102,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg width="22" height="22" viewBox="0 0 32 32" fill="#25D366"><path d="M16 2C8.268 2 2 8.268 2 16c0 2.522.658 4.888 1.806 6.938L2 30l7.278-1.782A13.944 13.944 0 0 0 16 30c7.732 0 14-6.268 14-14S23.732 2 16 2Zm0 25.6a11.55 11.55 0 0 1-5.884-1.604l-.422-.252-4.318 1.058 1.09-4.2-.276-.434A11.554 11.554 0 0 1 4.4 16C4.4 9.59 9.59 4.4 16 4.4S27.6 9.59 27.6 16 22.41 27.6 16 27.6Zm6.34-8.636c-.346-.174-2.05-1.01-2.368-1.126-.316-.116-.546-.174-.776.174-.228.348-.892 1.126-1.094 1.356-.202.228-.402.258-.748.086-.346-.174-1.46-.538-2.782-1.716-1.028-.916-1.722-2.048-1.924-2.394-.202-.348-.022-.536.152-.708.156-.156.346-.406.52-.608.174-.202.232-.348.348-.578.116-.232.058-.434-.028-.608-.088-.174-.776-1.872-1.064-2.562-.28-.67-.566-.578-.776-.59-.2-.01-.432-.012-.662-.012s-.604.086-.92.432c-.316.346-1.204 1.178-1.204 2.872s1.232 3.332 1.406 3.562c.174.228 2.426 3.706 5.878 5.198.822.354 1.464.566 1.964.724.824.262 1.576.224 2.17.136.662-.1 2.05-.838 2.34-1.648.29-.81.29-1.504.202-1.648-.086-.144-.316-.232-.662-.406Z"/></svg>
-        </span>
-        <div style="text-align:left">
-          <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">WhatsApp</div>
-          <div>+32 489 97 95 62</div>
-        </div>
-      </a>
-    </div>
-    <p style="margin-top:24px;font-size:13px;color:var(--text3)">Nous vous répondons généralement sous 24h</p>
-  </div>
-</section>
-
-<!-- CTA FINAL -->
-<section id="cta-final">
-  <div class="container" style="text-align:center">
-    <h2 class="section-title">Prêt à moderniser votre association ?</h2>
-    <p class="section-sub" style="margin:16px auto 40px">Rejoignez des centaines d'associations qui gèrent leur quotidien avec Nkap.. C'est gratuit pour commencer.</p>
-    <a href="#" class="btn btn-primary btn-lg">Créer mon espace gratuitement →</a>
-    <p style="margin-top:16px;font-size:13px;color:var(--text3)">Aucune carte bancaire · Configuration en 5 min · Support inclus</p>
-  </div>
-</section>
-
-<!-- FOOTER -->
-<footer>
-  <div style="font-family:'Sora',sans-serif;font-size:22px;color:var(--accent);margin-bottom:12px">Nkap.</div>
-  <p style="margin-bottom:8px">Logiciel de gestion d'association · <a href="#" style="color:var(--text3)">Mentions légales</a> · <a href="#" style="color:var(--text3)">CGU</a> · <a href="#" style="color:var(--text3)">Confidentialité</a></p>
-  <p style="margin-bottom:14px">© 2026 Nkap. · Tous droits réservés</p>
-  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-    <a href="mailto:fangseu@gmail.com" style="display:inline-flex;align-items:center;gap:6px;color:var(--text3);font-size:12px;border:1px solid var(--border);border-radius:8px;padding:6px 12px;transition:all .2s" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(26,158,122,.3)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-      fangseu@gmail.com
-    </a>
-    <a href="https://wa.me/32489979562?text=Bonjour%2C%20j%27ai%20besoin%20d%27aide%20avec%20Mboa." target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;color:var(--text3);font-size:12px;border:1px solid var(--border);border-radius:8px;padding:6px 12px;transition:all .2s" onmouseover="this.style.color='#25D366';this.style.borderColor='rgba(37,211,102,.3)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">
-      <svg width="13" height="13" viewBox="0 0 32 32" fill="currentColor"><path d="M16 2C8.268 2 2 8.268 2 16c0 2.522.658 4.888 1.806 6.938L2 30l7.278-1.782A13.944 13.944 0 0 0 16 30c7.732 0 14-6.268 14-14S23.732 2 16 2Zm0 25.6a11.55 11.55 0 0 1-5.884-1.604l-.422-.252-4.318 1.058 1.09-4.2-.276-.434A11.554 11.554 0 0 1 4.4 16C4.4 9.59 9.59 4.4 16 4.4S27.6 9.59 27.6 16 22.41 27.6 16 27.6Zm6.34-8.636c-.346-.174-2.05-1.01-2.368-1.126-.316-.116-.546-.174-.776.174-.228.348-.892 1.126-1.094 1.356-.202.228-.402.258-.748.086-.346-.174-1.46-.538-2.782-1.716-1.028-.916-1.722-2.048-1.924-2.394-.202-.348-.022-.536.152-.708.156-.156.346-.406.52-.608.174-.202.232-.348.348-.578.116-.232.058-.434-.028-.608-.088-.174-.776-1.872-1.064-2.562-.28-.67-.566-.578-.776-.59-.2-.01-.432-.012-.662-.012s-.604.086-.92.432c-.316.346-1.204 1.178-1.204 2.872s1.232 3.332 1.406 3.562c.174.228 2.426 3.706 5.878 5.198.822.354 1.464.566 1.964.724.824.262 1.576.224 2.17.136.662-.1 2.05-.838 2.34-1.648.29-.81.29-1.504.202-1.648-.086-.144-.316-.232-.662-.406Z"/></svg>
-      +32 489 97 95 62
-    </a>
-  </div>
-</footer>
-
-
-
 </div>
+
 
 <!-- APPLICATION -->
 
