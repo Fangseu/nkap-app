@@ -1365,7 +1365,12 @@ function initSB(url,key){
   });
 }
 function chargeD(){
-  return sb.from("utilisateurs").select("*,associations(*)").eq("auth_user_id",CU.id).then(function(res){
+  // Invitations en attente (même email, pas encore liées) : on les rattache à CHAQUE connexion,
+  // pas seulement quand l'utilisateur n'a aucune association (sinon une 3e asso n'apparaît jamais)
+  var em=(CU.email||"").toLowerCase().trim();
+  // égalité stricte (pas ilike : « _ » y est un joker et un admin peut modifier les lignes de son asso)
+  var lier=em?sb.from("utilisateurs").update({auth_user_id:CU.id}).eq("email",em).is("auth_user_id",null).then(function(){},function(){}):Promise.resolve();
+  return lier.then(function(){return sb.from("utilisateurs").select("*,associations(*)").eq("auth_user_id",CU.id);}).then(function(res){
     var rows=(res.data||[]).filter(function(r){return r.associations;});
     if(rows.length===1) return routerUtilisateur(rows[0]);
     if(rows.length>1)   return choisirAssociation(rows);
@@ -2375,7 +2380,9 @@ function saveMembre(){
   var prenom=gV("mm-prenom"),nom=gV("mm-nom");
   if(!prenom||!nom){alert("Prenom et nom requis.");return;}
   var id=E("mm-id").value;
-  var data={prenom:prenom,nom:nom,tel:gV("mm-tel")||null,email:gV("mm-email")||null,date_adhesion:E("mm-date").value||null,statut:E("mm-statut").value,note:gV("mm-note")||null};
+  var email=gV("mm-email").toLowerCase().replace(/\s+/g,"");
+  if(email&&!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(email)){alert("L'email « "+email+" » n'est pas valide (exemple : prenom.nom@gmail.com).");return;}
+  var data={prenom:prenom,nom:nom,tel:gV("mm-tel")||null,email:email||null,date_adhesion:E("mm-date").value||null,statut:E("mm-statut").value,note:gV("mm-note")||null};
   var btn=document.querySelector('#modal-m .btn-primary');
   if(btn){btn.disabled=true;btn.textContent='Enregistrement...';}
 
@@ -7323,6 +7330,10 @@ function inviterMembre(){
   var nom=opt.getAttribute("data-nom");
   if(!email){showAccesMsg("Ce membre n'a pas d'email renseigné sur sa fiche. Modifiez sa fiche d'abord.","e");return;}
   var emailN=email.toLowerCase().trim();
+  if(!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(emailN)){showAccesMsg("L'email de cette fiche (« "+emailN+" ») n'est pas valide. Corrigez la fiche du membre d'abord.","e");return;}
+  // L'admin qui choisit sa propre fiche n'a pas besoin d'un 2e accès : le bouton « Mon espace membre » suffit
+  var monEmail=(CU&&CU.email||"").toLowerCase().trim();
+  if(emailN===monEmail){showAccesMsg("C'est votre propre fiche : pas besoin d'accès. Utilisez le bouton « 👤 Mon espace membre » du menu.","w");return;}
 
   sb.from("utilisateurs").select("id,auth_user_id,role").eq("association_id",CA.id).eq("email",emailN).then(function(r){
     var existant=r.data&&r.data.length>0?r.data[0]:null;
