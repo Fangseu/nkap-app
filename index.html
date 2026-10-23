@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: https://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://graph.facebook.com https://api.callmebot.com https://cdn.jsdelivr.net https://api.brevo.com https://api.openai.com; worker-src blob:; manifest-src 'self' blob:; font-src https://fonts.gstatic.com data:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: https://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://graph.facebook.com https://api.callmebot.com https://cdn.jsdelivr.net https://api.brevo.com https://api.openai.com; worker-src blob:; manifest-src 'self' blob:; font-src https://fonts.gstatic.com data:;">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <style>
 /* ── Toast notifications ── */
@@ -976,7 +976,7 @@ function G(p){
   document.querySelectorAll(".page").forEach(function(x){x.classList.remove("active");});
   document.querySelectorAll(".nav-item,.ni").forEach(function(x){x.classList.remove("active");});
   var pg=E("page-"+p);if(pg)pg.classList.add("active");
-  var TITLES={dashboard:"Tableau de bord",membres:"Membres","reunions-liste":"Reunions","reunions-suivi":"Suivi absences","reunions-nouvelle":"Nouvelle reunion","votes-liste":"Votes","votes-nouvelle":"Nouveau vote","cotisations-liste":"Cotisations","cotisations-nouvelle":"Nouvelle cotisation","adhesion-fonds":"Fonds Adhesion","adhesion-paiements":"Paiements Adhesion","adhesion-nouveau":"Nouveau paiement","retards-liste":"Retards","retards-nouveau":"Nouveau retard","amendes-liste":"Amendes","amendes-nouvelle":"Nouvelle amende","dons-liste":"Dons","dons-remboursements":"Remboursements Dons","dons-nouveau":"Nouveau don","prets-liste":"Prets","prets-remboursements":"Remboursements Prets","prets-nouveau":"Nouveau pret","pret-interet-liste":"Prets Interets","pret-interet-remboursements":"Remboursements PI","pret-interet-nouveau":"Nouveau pret interets","projets-liste":"Projets","projets-remboursements":"Remboursements Projets","projets-nouveau":"Nouveau Projet","fond-caisse-journal":"Fond Caisse","fond-caisse-sortie":"Sortie Caisse","fond-cotisation-journal":"Fond Cotisation","fond-cotisation-virement":"Virement Cotisation",comptabilite:"Comptabilite",alertes:"Alertes","mon-compte":"Mon Compte",documents:"Documents",configuration:"Configuration",superadmin:"Super Admin","sa-dashboard":"SA Dashboard","sa-associations":"SA Associations","sa-creer":"SA Creer","sa-modifier":"SA Modifier","sa-alertes":"SA Alertes","vente-fond":"Vente Argent","vente-depot":"Nouveau depot","vente-prets":"Vente Prets","vente-pret-new":"Nouveau pret VA","vente-bilan":"Bilan annuel","vente-retrait":"Retrait fond",tontine:"Tontine","tontine-calendrier":"Calendrier tontine","tontine-cotisations":"Cotisations tontine","caisses-liste":"Caisses perso.","caisses-nouvelle":"Nouvelle caisse","caisse-detail":"Caisse","caisse-entree":"Entrée caisse","caisse-sortie":"Sortie caisse","assistant-ia":"Assistant IA",guide:"Guide vidéo"};
+  var TITLES={dashboard:"Tableau de bord",membres:"Membres","reunions-liste":"Reunions","reunions-suivi":"Suivi absences","reunions-nouvelle":"Nouvelle reunion","votes-liste":"Votes","votes-nouvelle":"Nouveau vote","cotisations-liste":"Cotisations","cotisations-nouvelle":"Nouvelle cotisation","adhesion-fonds":"Fonds Adhesion","adhesion-paiements":"Paiements Adhesion","adhesion-nouveau":"Nouveau paiement","retards-liste":"Retards","retards-nouveau":"Nouveau retard","amendes-liste":"Amendes","amendes-nouvelle":"Nouvelle amende","dons-liste":"Dons","dons-remboursements":"Remboursements Dons","dons-nouveau":"Nouveau don","prets-liste":"Prets","prets-remboursements":"Remboursements Prets","prets-nouveau":"Nouveau pret","pret-interet-liste":"Prets Interets","pret-interet-remboursements":"Remboursements PI","pret-interet-nouveau":"Nouveau pret interets","projets-liste":"Projets","projets-remboursements":"Remboursements Projets","projets-nouveau":"Nouveau Projet","fond-caisse-journal":"Fond Caisse","fond-caisse-sortie":"Sortie Caisse","fond-cotisation-journal":"Fond Cotisation","fond-cotisation-virement":"Virement Cotisation",comptabilite:"Comptabilite",alertes:"Alertes","mon-compte":"Mon Compte",documents:"Documents",configuration:"Configuration",superadmin:"Super Admin","sa-dashboard":"SA Dashboard","sa-associations":"SA Associations","sa-creer":"SA Creer","sa-modifier":"SA Modifier","sa-alertes":"SA Alertes","vente-fond":"Vente Argent","vente-depot":"Nouveau depot","vente-prets":"Vente Prets","vente-pret-new":"Nouveau pret VA","vente-bilan":"Bilan annuel","vente-retrait":"Retrait fond",tontine:"Tontine","tontine-calendrier":"Calendrier tontine","tontine-cotisations":"Cotisations tontine","caisses-liste":"Caisses perso.","caisses-nouvelle":"Nouvelle caisse","caisse-detail":"Caisse","caisse-entree":"Entrée caisse","caisse-sortie":"Sortie caisse","assistant-ia":"Assistant IA",guide:"Guide vidéo",messagerie:"Messagerie"};
   var te=E("page-title");if(te)te.textContent=TITLES[p]||p;
   document.querySelectorAll(".nav-item,.ni").forEach(function(n){var oc=n.getAttribute("onclick")||"";if(oc==="G('"+p+"')"||oc==='G("'+p+'")')n.classList.add("active");});
   closeSB();
@@ -1031,7 +1031,9 @@ function G(p){
   if(_anthEl&&_savedKey)_anthEl.value=_savedKey;loadConf();initAccesMembres();initMultiAdmin();initSignataires();chargerRappelPushAdmin();initRecurrence();checkSuperAdmin();}
   else if(p==="assistant-ia"){switchIATab('chat');}
   else if(p==="guide"){rGuide();}
+  else if(p==="messagerie"){chatOuvrir('messagerie-zone',CA&&CA.id);}
   else if(p==="superadmin")rSuperAdmin();
+  if(p!=="messagerie"&&CA)chatNonLus(CA.id);
   else if(p==="sa-dashboard")rSADashboard();
   else if(p==="sa-associations")rSAAssociations();
   else if(p==="sa-modifier")rSAModifier();
@@ -5922,6 +5924,7 @@ function renderMembrePortal(m,mid,aid){
     _mbTabBtn('accueil','🏠','Accueil',0)+
     _mbTabBtn('finances','💳','Finances',nbAlerts)+
     _mbTabBtn('reunions','📅','Réunions',0)+
+    _mbTabBtn('messages','💬','Discussion<span id="chat-badge-mb"></span>',0)+
     (votes.length?_mbTabBtn('votes','🗳️','Votes',nbVotesEnAttente):'')+
     (hasTontine?_mbTabBtn('tontine','🎰','Tontine',nbEchanges):'')+
     _mbTabBtn('va','💰','Vente Argent',0)+
@@ -6266,6 +6269,9 @@ function renderMembrePortal(m,mid,aid){
     '<div id="mb-va-zone"></div>'+
     '</div>'+
 
+    // ── ONGLET : DISCUSSION (messagerie de l'association) ─────────
+    '<div id="mbt-messages" class="mb-tab-panel" style="display:none"><div id="mb-chat-zone"></div></div>'+
+
     // ── ONGLET : AIDE (guide vidéo) ───────────────────────────────
     '<div id="mbt-aide" class="mb-tab-panel" style="display:none">'+
     '<div class="card" style="margin-bottom:14px"><div style="font-size:13px;color:var(--text2)">🎬 Des vidéos d’une minute pour utiliser ton espace membre.</div></div>'+
@@ -6594,6 +6600,9 @@ function renderMembrePortal(m,mid,aid){
 
   // ── Vente Argent → chargé à la première visite de l'onglet ──
   if(window._mbActiveTab==='va'){chargeVAZoneMembre(mid,aid,sym);}
+
+  // ── Discussion : pastille des messages non lus ───────────────
+  chatNonLus(aid);
 }
 
 function _mbTabBtn(id,icon,label,alertCount){
@@ -6697,6 +6706,123 @@ function switchMbTab(tabId,noSave){
     var vz=E('mb-va-zone');
     if(vz&&!vz._vaLoaded){vz._vaLoaded=true;chargeVAZoneMembre(window._mbMid,window._mbAid,getSym());}
   }
+  if(tabId==='messages')chatOuvrir('mb-chat-zone',window._mbAid);
+}
+
+// ================================================================
+// MESSAGERIE : un fil de discussion par association (temps réel)
+// Table « messages » : l'auteur, son nom et son rôle sont fixés par la base.
+// Effacer : son propre message, ou tout message pour le bureau (RLS).
+// ================================================================
+var _chat={aid:null,chan:null,box:null,msgs:[],mod:false};
+function _chatCss(){
+  if(E('chat-css'))return;
+  var s=document.createElement('style');s.id='chat-css';
+  s.textContent=
+    '.chat-wrap{display:flex;flex-direction:column;height:min(68vh,640px);background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}'+
+    '.chat-list{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--bg3)}'+
+    '.chat-day{align-self:center;font-size:11px;color:var(--text3);background:var(--card);padding:2px 10px;border-radius:10px;margin:6px 0}'+
+    '.chat-msg{max-width:80%;align-self:flex-start;background:var(--card);border:1px solid var(--border);border-radius:14px 14px 14px 4px;padding:8px 12px}'+
+    '.chat-msg.moi{align-self:flex-end;background:var(--accent-light);border-color:rgba(26,158,122,.3);border-radius:14px 14px 4px 14px}'+
+    '.chat-aut{font-size:11px;font-weight:700;color:var(--accent);margin-bottom:2px}'+
+    '.chat-role{font-weight:600;color:var(--text3);margin-left:4px}'+
+    '.chat-txt{font-size:14px;color:var(--text);white-space:pre-wrap;overflow-wrap:anywhere}'+
+    '.chat-meta{font-size:10px;color:var(--text3);margin-top:3px;display:flex;gap:10px;justify-content:flex-end;align-items:center}'+
+    '.chat-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;padding:0}'+
+    '.chat-form{display:flex;gap:8px;padding:10px;border-top:1px solid var(--border);background:var(--card)}'+
+    '.chat-form textarea{flex:1;resize:none;height:46px;border:1px solid var(--border);border-radius:12px;padding:11px 12px;font:inherit;font-size:14px;background:var(--bg3);color:var(--text)}'+
+    '.chat-form button{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:0 18px;font-weight:700;cursor:pointer}'+
+    '.chat-badge{background:var(--red);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:4px}';
+  document.head.appendChild(s);
+}
+function chatOuvrir(cid,aid){
+  _chatCss();
+  var box=E(cid);if(!box||!aid)return;
+  // Déjà ouvert sur ce même conteneur : on marque juste comme lu
+  if(_chat.aid===aid&&_chat.box===box&&_chat.chan&&E('chat-list')){_chatRendre(true);_chatMarquerLu(aid);return;}
+  if(_chat.chan){try{sb.removeChannel(_chat.chan);}catch(e){}_chat.chan=null;}
+  _chat.aid=aid;_chat.box=box;_chat.msgs=[];_chat.mod=false;
+  box.innerHTML='<div class="chat-wrap"><div class="chat-list" id="chat-list"><div class="chat-day">Chargement…</div></div>'+
+    '<form class="chat-form" onsubmit="chatEnvoyer(event)">'+
+    '<textarea id="chat-input" maxlength="2000" placeholder="Écrire un message…" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){chatEnvoyer(event);}"></textarea>'+
+    '<button type="submit">Envoyer</button></form></div>'+
+    '<div style="font-size:11px;color:var(--text3);margin-top:6px">💬 Visible par tous les membres de l\'association. Chacun peut effacer ses messages ; le bureau peut effacer n\'importe quel message.</div>';
+  Promise.all([sb.rpc('is_admin_of',{target_association_id:aid}),sb.rpc('est_bureau_de',{target_association_id:aid})]).then(function(r){
+    _chat.mod=!!((r[0]&&r[0].data)||(r[1]&&r[1].data));
+    if(_chat.aid===aid)_chatRendre();
+  },function(){});
+  sb.from('messages').select('*').eq('association_id',aid).order('created_at',{ascending:false}).limit(200).then(function(r){
+    if(_chat.aid!==aid)return;
+    var l=E('chat-list');
+    if(r.error){if(l)l.innerHTML='<div class="chat-day">Messagerie indisponible pour le moment.</div>';return;}
+    _chat.msgs=(r.data||[]).reverse();_chatRendre(true);_chatMarquerLu(aid);
+  });
+  _chat.chan=sb.channel('chat-'+aid)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:'association_id=eq.'+aid},function(p){
+      var m=p.new;if(_chat.aid!==aid||!m)return;
+      if(_chat.msgs.some(function(x){return x.id===m.id;}))return;
+      _chat.msgs.push(m);_chatRendre(true);
+      if(_chatVisible())_chatMarquerLu(aid);else chatNonLus(aid);
+    })
+    .on('postgres_changes',{event:'DELETE',schema:'public',table:'messages'},function(p){
+      var id=p.old&&p.old.id;if(!id)return;
+      var n=_chat.msgs.length;_chat.msgs=_chat.msgs.filter(function(x){return x.id!==id;});
+      if(_chat.msgs.length!==n)_chatRendre();
+    })
+    .subscribe();
+}
+function _chatVisible(){return !!(_chat.box&&_chat.box.offsetParent!==null&&document.visibilityState==='visible');}
+function _chatRendre(scroll){
+  var l=E('chat-list');if(!l)return;
+  if(!_chat.msgs.length){l.innerHTML='<div class="chat-day">Aucun message pour l\'instant. Lance la discussion ! 👋</div>';return;}
+  var enBas=l.scrollHeight-l.scrollTop-l.clientHeight<80,jour='',h='';
+  _chat.msgs.forEach(function(m){
+    var d=new Date(m.created_at),j=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+    if(j!==jour){jour=j;h+='<div class="chat-day">'+esc(j)+'</div>';}
+    var moi=!!(CU&&m.auth_user_id===CU.id);
+    h+='<div class="chat-msg'+(moi?' moi':'')+'">'+
+      (moi?'':'<div class="chat-aut">'+esc(m.auteur_nom||'Membre')+(m.auteur_role&&m.auteur_role!=='membre'?'<span class="chat-role">· '+esc(m.auteur_role)+'</span>':'')+'</div>')+
+      '<div class="chat-txt">'+esc(m.contenu)+'</div>'+
+      '<div class="chat-meta">'+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+
+      (moi||_chat.mod?'<button type="button" class="chat-del" onclick="chatEffacer(\''+m.id+'\')">Effacer</button>':'')+'</div></div>';
+  });
+  l.innerHTML=h;
+  if(scroll||enBas)l.scrollTop=l.scrollHeight;
+}
+function chatEnvoyer(ev){
+  if(ev)ev.preventDefault();
+  var t=E('chat-input');if(!t||!_chat.aid)return;
+  var txt=(t.value||'').trim();if(!txt)return;
+  t.disabled=true;
+  sb.from('messages').insert({association_id:_chat.aid,contenu:txt}).select().single().then(function(r){
+    t.disabled=false;
+    if(r.error){toastErr('Message non envoyé : '+r.error.message);return;}
+    t.value='';t.focus();
+    if(r.data&&!_chat.msgs.some(function(x){return x.id===r.data.id;})){_chat.msgs.push(r.data);_chatRendre(true);}
+    _chatMarquerLu(_chat.aid);
+  });
+}
+function chatEffacer(id){
+  if(!confirm('Effacer ce message ?'))return;
+  sb.from('messages').delete().eq('id',id).select('id').then(function(r){
+    if(r.error||!r.data||!r.data.length){toastErr('Impossible d\'effacer ce message.');return;}
+    _chat.msgs=_chat.msgs.filter(function(x){return x.id!==id;});_chatRendre();
+  });
+}
+// Messages non lus : date du dernier passage gardée dans le navigateur, par association
+function _chatMarquerLu(aid){lsSet('nkap-chat-lu-'+aid,new Date().toISOString());_chatBadge(0);}
+function _chatBadge(n){
+  ['chat-badge-mb','chat-badge-nav'].forEach(function(id){
+    var b=E(id);if(b)b.innerHTML=n>0?'<span class="chat-badge">'+(n>99?'99+':n)+'</span>':'';
+  });
+}
+function chatNonLus(aid){
+  if(!aid||!CU||!window.sb)return;
+  _chatCss();
+  var lu=lsGet('nkap-chat-lu-'+aid,'1970-01-01T00:00:00Z');
+  sb.from('messages').select('id',{count:'exact',head:true}).eq('association_id',aid).gt('created_at',lu).neq('auth_user_id',CU.id).then(function(r){
+    if(!r.error)_chatBadge(r.count||0);
+  },function(){});
 }
 
 function voterMembre(voteId,choix,mid,aid){
@@ -7890,7 +8016,7 @@ var PERMS_BUREAU = {
     'caisses-liste','caisses-nouvelle','caisse-detail','caisse-entree','caisse-sortie',
     'vente-fond','vente-depot','vente-retrait','vente-prets','vente-pret-new','vente-bilan',
     'votes-liste','votes-nouvelle',
-    'comptabilite','alertes','mon-compte','documents','assistant-ia','guide'
+    'comptabilite','alertes','mon-compte','documents','assistant-ia','guide','messagerie'
   ],
   secretaire: [
     'dashboard','membres',
@@ -7901,7 +8027,7 @@ var PERMS_BUREAU = {
     'dons-nouveau',
     'projets-nouveau',
     'tontine','tontine-calendrier','tontine-cotisations',
-    'alertes','mon-compte','documents','assistant-ia','guide'
+    'alertes','mon-compte','documents','assistant-ia','guide','messagerie'
   ]
 };
 // Note: la création et la validation des votes sont ouvertes à tout compte admin
@@ -10630,6 +10756,7 @@ function lpFocusLogin(){
       <div class="nav-label">Principal</div>
       <div class="nav-item ni active" onclick="G('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Tableau de bord</div>
       <div class="nav-item ni" onclick="G('membres')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Membres</div>
+      <div class="nav-item ni" onclick="G('messagerie')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messagerie<span id="chat-badge-nav"></span></div>
       <div class="nav-item ni" onclick="G('guide')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10 9 15 12 10 15 10 9"/></svg>Guide vidéo</div>
     </div>
 
@@ -11791,6 +11918,7 @@ function lpFocusLogin(){
 
     <!-- ============= PAGE ASSISTANT IA ============= -->
     <div class="page" id="page-guide"><div id="guide-content"></div></div>
+    <div class="page" id="page-messagerie"><div id="messagerie-zone"></div></div>
 
     <div class="page" id="page-assistant-ia">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
