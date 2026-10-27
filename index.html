@@ -1033,7 +1033,6 @@ function G(p){
   else if(p==="guide"){rGuide();}
   else if(p==="messagerie"){chatOuvrir('messagerie-zone',CA&&CA.id);}
   else if(p==="superadmin")rSuperAdmin();
-  if(p!=="messagerie"&&CA)chatNonLus(CA.id);
   else if(p==="sa-dashboard")rSADashboard();
   else if(p==="sa-associations")rSAAssociations();
   else if(p==="sa-modifier")rSAModifier();
@@ -1044,6 +1043,8 @@ function G(p){
   else if(p==="vente-pret-new"){pSels2();var vpd=E("va-p-dt");if(vpd)vpd.value=td();sH("va-p-preview","");}
   else if(p==="vente-bilan"){initVABilan();rVABilan();rVAHistorique();}
   else if(p==="vente-retrait"){pSels2();var vrd=E("va-ret-dt");if(vrd)vrd.value=td();sH("va-ret-solde","--");sH("va-ret-preview","");}
+  // Pastille « messages non lus » (après l'aiguillage, pour ne pas le couper)
+  if(p!=="messagerie"&&CA)chatNonLus(CA.id);
 }
 function pSels(){
   var opts=MC.filter(function(m){return m.statut==="actif";}).map(function(m){return '<option value="'+m.id+'">'+ esc(m.prenom)+' '+esc(m.nom)+'</option>';}).join('');
